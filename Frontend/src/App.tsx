@@ -18,8 +18,10 @@ import Login from "./pages/auth/Login";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 
 // User Pages
-import MentalTracker from "./pages/user/MentalTracker";
+import MentalTracker from "./pages/user/games/MentalTracker";
 import Appointments from "./pages/user/Appointments";
+import GameZone from "./pages/user/games/GameZone";
+import StressQuiz from "./pages/user/games/StressQuiz";
 
 // Static Pages
 import About from "./pages/static/About";
@@ -84,10 +86,28 @@ const App: React.FC = () => {
               <Route path="/forgot-password" element={<ForgotPassword />} />
 
               <Route
-                path="/mental-tracker"
+                path="/gamezone/mental-tracker"
                 element={
                   <AppLayout>
                     <MentalTracker />
+                  </AppLayout>
+                }
+              />
+
+              <Route
+                path="/gamezone"
+                element={
+                  <AppLayout>
+                    <GameZone />
+                  </AppLayout>
+                }
+              />
+
+              <Route
+                path="/gamezone/stress-quiz"
+                element={
+                  <AppLayout>
+                    <StressQuiz />
                   </AppLayout>
                 }
               />

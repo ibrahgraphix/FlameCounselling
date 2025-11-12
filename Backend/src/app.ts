@@ -21,7 +21,7 @@ dotenv.config();
 const app = express();
 
 // allow cross-origin from your front-end with credentials
-const CLIENT_ORIGIN = process.env.CLIENT_URL || "http://localhost:8080";
+const CLIENT_ORIGIN = process.env.CLIENT_URL || "http://localhost:7070";
 app.use(
   cors({
     origin: CLIENT_ORIGIN,

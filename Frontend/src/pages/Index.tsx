@@ -125,11 +125,11 @@ const Index = () => {
               Book session 💖
             </Button>
           </Link>
-          <Link to="/mental-tracker" className="w-full sm:w-auto">
+          <Link to="/gamezone" className="w-full sm:w-auto">
             <Button
               className={`w-full sm:w-auto py-3 px-6 rounded-full border-2 border-[#1e3a8a] ${textColor} hover:bg-[#1e3a8a]/10 shadow-lg`}
             >
-              Track Mood
+              GameZone
             </Button>
           </Link>
         </div>

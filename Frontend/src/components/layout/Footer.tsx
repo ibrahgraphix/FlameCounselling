@@ -49,6 +49,7 @@ const Footer = () => {
           <ul className="space-y-2 text-sm">
             {[
               { label: "Home", path: "/" },
+              { label: "GameZone", path: "/gamezone" },
               { label: "About Us", path: "/about" },
               { label: "Contact", path: "/contact" },
             ].map(({ label, path }) => (

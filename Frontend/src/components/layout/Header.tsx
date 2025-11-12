@@ -53,6 +53,13 @@ const Header = () => {
                 Home
               </Link>
               <Link
+                to="/gamezone"
+                className={`px-2 py-1 ${hoverColor} transition-colors ${textColor}`}
+              >
+                GameZone
+              </Link>
+
+              <Link
                 to="/about"
                 className={`px-2 py-1 ${hoverColor} transition-colors ${textColor}`}
               >

@@ -44,13 +44,13 @@ const HeroSection = () => {
                 Book Session
               </Button>
             </Link>
-            <Link to="/mental-tracker" className="w-full sm:w-auto">
+            <Link to="/gamezone" className="w-full sm:w-auto">
               <Button
                 variant="outline"
                 className="w-full sm:w-auto py-3 px-6 rounded-full shadow-md hover:shadow-lg text-sm sm:text-base"
                 style={{ borderColor: "#3b82f6", color: "#1e3a8a" }}
               >
-                Track Mood
+                GameZone
               </Button>
             </Link>
           </div>

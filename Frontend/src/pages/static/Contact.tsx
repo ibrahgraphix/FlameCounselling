@@ -1,9 +1,10 @@
+// src/pages/static/Contact.tsx
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Phone, MapPin, Clock } from "lucide-react";
 
 const Contact = () => {
-  const gradient = "bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6]";
+  const gradientClasses = "bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6]";
 
   return (
     <div className="min-h-screen pt-10 pb-20 bg-white">
@@ -29,7 +30,7 @@ const Contact = () => {
                     icon: <Phone className="h-5 w-5" />,
                     label: "Phone",
                     value: "+91 9876543210",
-                    href: "tel:+91 9876543210",
+                    href: "tel:+919876543210",
                   },
                   {
                     icon: <MapPin className="h-5 w-5" />,
@@ -46,7 +47,8 @@ const Contact = () => {
                 ].map((info, idx) => (
                   <div key={idx} className="flex items-start gap-3">
                     <div
-                      className={`${gradient} p-2 rounded-full text-white mt-1`}
+                      className={`${gradientClasses} p-2 rounded-full text-white mt-1`}
+                      aria-hidden
                     >
                       {info.icon}
                     </div>
@@ -62,7 +64,7 @@ const Contact = () => {
                           {info.value}
                         </a>
                       ) : (
-                        <pre className="whitespace-pre-wrap text-muted-foreground">
+                        <pre className="whitespace-pre-wrap text-muted-foreground m-0">
                           {info.value}
                         </pre>
                       )}
@@ -72,17 +74,30 @@ const Contact = () => {
               </CardContent>
             </Card>
 
-            <Card className={`${gradient} text-white rounded-2xl shadow-sm`}>
-              <CardContent className="pt-6 text-center">
-                <h3 className="text-lg font-semibold mb-1">
-                  💖 Need Immediate Help?
-                </h3>
-                <p className="text-sm mb-3">
-                  Please reach out to a professional right away. Your well-being
-                  is important!
-                </p>
-                <p className="text-lg font-bold">+91 9876543210</p>
-              </CardContent>
+            {/* ---- Last Card: use inner element with inline gradient background so text always contrasts ---- */}
+            <Card className="rounded-2xl shadow-sm overflow-hidden border-none">
+              {/* We avoid putting the gradient class on the Card itself because the Card component
+                  may impose internal background/color rules. Instead we put a full-width inner
+                  div that uses the gradient as inline style — this ensures the gradient is the
+                  visible background and that text sits on top of it. */}
+              <div
+                style={{
+                  background:
+                    "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)",
+                }}
+                className="p-6 text-center"
+              >
+                <CardContent className="p-0">
+                  <h3 className="text-lg font-semibold mb-1 text-white">
+                    💖 Need Immediate Help?
+                  </h3>
+                  <p className="text-sm mb-3 text-white/90">
+                    Please reach out to a professional right away. Your
+                    well-being is important!
+                  </p>
+                  <p className="text-lg font-bold text-white">+91 9876543210</p>
+                </CardContent>
+              </div>
             </Card>
           </div>
         </div>
