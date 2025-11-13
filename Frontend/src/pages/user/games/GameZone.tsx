@@ -43,7 +43,7 @@ const GameZone: React.FC = () => {
     },
     {
       id: "mind-match",
-      title: "Mind Match (coming soon)",
+      title: "Mind Match",
       desc: "Memory-style pairing game to practise focus & coping skill association.",
       details:
         "A fun matching game to reinforce healthy coping strategies. Coming soon!",
@@ -54,7 +54,7 @@ const GameZone: React.FC = () => {
 
   return (
     <div className={`min-h-screen ${bgColor} py-8 px-4`}>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <header className="mb-6 text-center">
           <h1
             className={`text-2xl sm:text-3xl font-bold ${textColor} mb-2`}
@@ -72,7 +72,8 @@ const GameZone: React.FC = () => {
           </p>
         </header>
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* ✅ Updated grid layout — 3 cards per row on large screens */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {games.map((g) => (
             <Card
               key={g.id}
@@ -131,9 +132,6 @@ const GameZone: React.FC = () => {
                     >
                       Coming Soon
                     </Button>
-                    <p className={`${mutedText} text-xs`}>
-                      We'll add this soon.
-                    </p>
                   </div>
                 )}
               </CardContent>

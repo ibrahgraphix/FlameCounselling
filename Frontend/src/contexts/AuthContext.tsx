@@ -4,7 +4,8 @@ import { toast } from "@/components/ui/sonner";
 import { setAuthToken } from "@/services/api";
 
 const API_BASE: string =
-  (import.meta.env.VITE_API_BASE as string) || "http://localhost:4000";
+  (import.meta.env.VITE_API_BASE as string) ||
+  "https://c22d755b01d1a5.lhr.life";
 
 export type User = {
   id: number;
