@@ -187,19 +187,6 @@ const AdminLayout: React.FC = () => {
           {/* Footer */}
           <div className={`p-3 md:p-4 mt-auto border-t ${borderColor}`}>
             <div className="flex flex-col items-center md:items-stretch">
-              <Link
-                to="/"
-                className={`text-xs mb-3 transition ${linkColor} ${
-                  collapsed ? "text-center" : ""
-                }`}
-              >
-                {collapsed ? (
-                  <span title="Return to Home">Home</span>
-                ) : (
-                  "Return to Home Page"
-                )}
-              </Link>
-
               <Button
                 variant="ghost"
                 className={`justify-start hover:bg-blue-700 w-full ${

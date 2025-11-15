@@ -26,7 +26,7 @@ const Footer = () => {
               }}
               className="text-3xl font-bold drop-shadow-sm"
             >
-              Flame
+              FLAME
             </span>
             <span
               style={{ color: "#1e3a8a" }}
@@ -73,7 +73,7 @@ const Footer = () => {
           <ul className="space-y-2 text-sm">
             {[
               { label: "Book Appointment", path: "/appointments" },
-              { label: "View Schedule", path: "/appointments" },
+              { label: "Play Games", path: "/gamezone" },
             ].map(({ label, path }) => (
               <li key={label}>
                 <Link
@@ -95,14 +95,14 @@ const Footer = () => {
           <ul className="space-y-2 text-sm" className={textMuted}>
             <li>flamecounseling@gmail.com</li>
             <li>+91 9876543210</li>
-            <li>Chandragupta West Wing, Flame Campus</li>
+            <li>Chandragupta West Wing, Flame</li>
           </ul>
         </div>
       </div>
 
       <div className={`mt-10 pt-6 border-t text-center ${borderColor}`}>
         <p className={`text-xs ${textMuted}`}>
-          © {new Date().getFullYear()} FlameCounseling. All rights reserved.
+          © {new Date().getFullYear()} FLAMECounseling. All rights reserved.
         </p>
       </div>
     </footer>

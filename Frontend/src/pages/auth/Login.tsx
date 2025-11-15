@@ -280,7 +280,7 @@ const Login: React.FC = () => {
                 style={{ color: "#000000" }}
                 className="text-3xl font-bold leading-tight text-center mb-2"
               >
-                FlameCounseling
+                FLAMECounseling
               </div>
               <div className={`text-base ${mutedText} text-center`}>
                 Please Enter your credentials
