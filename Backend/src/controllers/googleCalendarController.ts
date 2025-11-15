@@ -57,8 +57,12 @@ export const oauthCallback = async (req: Request, res: Response) => {
           state
         );
       }
-      if (counselorRow && typeof counselorRow.counselor_id !== "undefined") {
-        await counselorRepository
+      if (
+        counselorRow &&
+        typeof (counselorRepository as any).setGoogleConnected === "function"
+      ) {
+        // call via any to avoid TypeScript errors if repository typings don't include this function
+        await (counselorRepository as any)
           .setGoogleConnected(counselorRow.counselor_id, true)
           .catch(() => {});
       }

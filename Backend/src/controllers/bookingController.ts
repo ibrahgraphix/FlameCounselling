@@ -1,7 +1,7 @@
 // src/controllers/bookingController.ts
 import { Request, Response } from "express";
 import bookingService from "../services/bookingService";
-import jwt from "jsonwebtoken";
+import * as jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { JWT_SECRET as JWT_SECRET_FROM_UTIL } from "../utils/jwt";
 import { getCounselorById } from "../repositories/counselorRepository";
@@ -10,8 +10,10 @@ import GoogleCalendarService from "../services/googleCalendarService";
 
 dotenv.config();
 
-const JWT_SECRET =
-  JWT_SECRET_FROM_UTIL || process.env.JWT_SECRET || "supersecret";
+const JWT_SECRET: jwt.Secret =
+  (JWT_SECRET_FROM_UTIL as jwt.Secret) ||
+  (process.env.JWT_SECRET as jwt.Secret) ||
+  "supersecret";
 const TOKEN_EXPIRY = process.env.STUDENT_TOKEN_EXPIRY || "3650d";
 
 const normalizeStatus = (s: string) => {
@@ -58,11 +60,11 @@ export const BookingController = {
 
       // Issue long lived token for student's email (guest flow)
       const accessToken = jwt.sign(
-        { email: String(student_email) },
+        { email: String(student_email) } as any,
         JWT_SECRET,
         {
           expiresIn: TOKEN_EXPIRY,
-        }
+        } as jwt.SignOptions
       );
 
       // Try to get counselor info
@@ -103,7 +105,7 @@ export const BookingController = {
 
       let decoded: any = null;
       try {
-        decoded = jwt.verify(access_token, JWT_SECRET) as any;
+        decoded = jwt.verify(access_token, JWT_SECRET as jwt.Secret) as any;
       } catch (err) {
         return res
           .status(403)

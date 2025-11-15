@@ -1,5 +1,5 @@
 // src/config/db.ts
-import { Pool } from "pg";
+const { Pool } = require("pg");
 import dotenv from "dotenv";
 dotenv.config();
 
