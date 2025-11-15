@@ -3,7 +3,9 @@ import axios from "axios";
 import { toast } from "@/components/ui/sonner";
 import { setAuthToken } from "@/services/api";
 
-const API_BASE: string = import.meta.env.VITE_API_BASE as string;
+const API_BASE: string =
+  (import.meta.env.VITE_API_BASE as string) ||
+  "https://flamestudentcouncil.in:5050";
 
 export type User = {
   id: number;

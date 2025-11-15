@@ -6,7 +6,7 @@ import counselorRepository from "../repositories/counselorRepository";
 const FRONTEND_ORIGIN =
   process.env.CLIENT_URL ||
   process.env.FRONTEND_ORIGIN ||
-  "http://localhost:7070";
+  "https://flamestudentcouncil.in:3030";
 
 export const getAuthUrl = async (req: Request, res: Response) => {
   try {

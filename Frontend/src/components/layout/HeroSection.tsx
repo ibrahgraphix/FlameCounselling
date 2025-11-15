@@ -62,7 +62,7 @@ const HeroSection = () => {
             <Swiper
               modules={[EffectFade, Autoplay]}
               effect="fade"
-              autoplay={{ delay: 4000 }}
+              autoplay={{ delay: 5050 }}
               loop
               className="rounded-xl"
             >

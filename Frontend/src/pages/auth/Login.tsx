@@ -19,11 +19,9 @@ declare global {
   }
 }
 
-// ADD THIS AS BACKEND URL https://c22d755b01d1a5.lhr.life
-// front end http://192.168.8.10:7070
 const API_BASE: string =
   (import.meta.env.VITE_API_BASE as string) ||
-  "https://c22d755b01d1a5.lhr.life";
+  "https://flamestudentcouncil.in:5050";
 const VITE_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as
   | string
   | undefined;
