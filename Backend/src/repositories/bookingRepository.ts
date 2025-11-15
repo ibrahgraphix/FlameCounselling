@@ -112,6 +112,28 @@ export const bookingRepository = {
     if (!res.rows || res.rows.length === 0) return null;
     return res.rows[0];
   },
+
+  /**
+   * Persist google event id to booking row.
+   * Returns the updated booking row or null if not found.
+   */
+  async updateGoogleEventId(
+    bookingId: string | number,
+    googleEventId: string
+  ): Promise<any | null> {
+    try {
+      const q = `UPDATE bookings
+                 SET google_event_id = $1, updated_at = NOW()
+                 WHERE booking_id = $2
+                 RETURNING booking_id, student_id, counselor_id, booking_date, booking_time, year_level, additional_notes, status, created_at, updated_at, google_event_id`;
+      const res = await pool.query(q, [googleEventId, bookingId]);
+      if (!res.rows || res.rows.length === 0) return null;
+      return res.rows[0];
+    } catch (err: any) {
+      console.error("bookingRepository.updateGoogleEventId error:", err);
+      throw err;
+    }
+  },
 };
 
 export default bookingRepository;

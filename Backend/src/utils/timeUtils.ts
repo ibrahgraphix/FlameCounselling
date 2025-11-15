@@ -3,10 +3,6 @@ import { DateTime, Interval } from "luxon";
 
 export type BusyRange = { start: string; end: string };
 
-/**
- * Generate time slots for a given date (YYYY-MM-DD) in timezone, excluding busyRanges.
- * Returns array of { startISO, endISO, label }.
- */
 export function generateTimeSlots(
   dateISO: string,
   workingStart: string,
@@ -52,8 +48,9 @@ export function generateTimeSlots(
     );
     if (!overlap) {
       slots.push({
-        startISO: slotStart.toISO(),
-        endISO: slotEnd.toISO(),
+        // toISO() can return string|null — use ?? "" to guarantee string type
+        startISO: slotStart.toISO() ?? "",
+        endISO: slotEnd.toISO() ?? "",
         label: `${slotStart.toFormat("HH:mm")}-${slotEnd.toFormat("HH:mm")}`,
       });
     }
