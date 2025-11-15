@@ -26,7 +26,7 @@ const Footer = () => {
               }}
               className="text-3xl font-bold drop-shadow-sm"
             >
-              FLAME
+              Flame
             </span>
             <span
               style={{ color: "#1e3a8a" }}
@@ -93,16 +93,16 @@ const Footer = () => {
             Contact
           </h3>
           <ul className="space-y-2 text-sm" className={textMuted}>
-            <li>FLAMEcounseling@gmail.com</li>
+            <li>flamecounseling@gmail.com</li>
             <li>+91 9876543210</li>
-            <li>Chandragupta West Wing, FLAME</li>
+            <li>Chandragupta West Wing, Flame Campus</li>
           </ul>
         </div>
       </div>
 
       <div className={`mt-10 pt-6 border-t text-center ${borderColor}`}>
         <p className={`text-xs ${textMuted}`}>
-          © {new Date().getFullYear()} FLAMECounseling. All rights reserved.
+          © {new Date().getFullYear()} FlameCounseling. All rights reserved.
         </p>
       </div>
     </footer>
