@@ -4,13 +4,10 @@ import https from "https";
 import path from "path";
 import fs from "fs";
 import { config } from "dotenv";
-import { fileURLToPath } from "url";
 
 config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+// In CommonJS builds (__dirname exists), so use that instead of import.meta.url
 const app = express();
 
 // Load SSL certificates
@@ -21,6 +18,7 @@ const sslOptions = {
 };
 
 // Find the client build directory (adjusted for sibling Frontend folder)
+// Using __dirname (this file's folder) to compute path relative to the Backend folder
 const frontendDir = path.join(__dirname, "..", "Frontend");
 const buildCandidates: string[] = [
   path.join(frontendDir, "dist"), // Vite monorepo client/dist

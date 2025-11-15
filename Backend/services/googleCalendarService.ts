@@ -1,13 +1,12 @@
-// src/services/googleCalendarService.ts
 import { google } from "googleapis";
 import dotenv from "dotenv";
 import crypto from "crypto";
 import counselorRepository from "../repositories/counselorRepository";
 import bookingRepository from "../repositories/bookingRepository";
 import { studentRepository } from "../repositories/studentRepository";
-// @ts-ignore - avoid immediate build error if luxon types are not installed
+// @ts-ignore: avoid immediate build error if luxon types are not installed
 import { DateTime } from "luxon";
-import { generateTimeSlots } from "../utils/timeUtils";
+import { generateTimeSlots, BusyRange } from "../utils/timeUtils";
 import pool from "../config/db";
 
 // import canonical scopes from authService so we don't duplicate scope definitions
@@ -293,7 +292,7 @@ const GoogleCalendarService = {
       // Otherwise surface a descriptive message.
       throw new Error(
         "Failed to query Google freebusy: " +
-          ((e && e.message) || String(e) || "unknown")
+          ((e && (e as any).message) || String(e) || "unknown")
       );
     }
 
@@ -301,8 +300,8 @@ const GoogleCalendarService = {
     const busy = fbRes?.data?.calendars?.[calendarIdUsed]?.busy ?? [];
 
     const busyRanges: BusyRange[] = (busy || []).map((b: any) => {
-      const s = DateTime.fromISO(b.start).setZone(timezone).toISO();
-      const e = DateTime.fromISO(b.end).setZone(timezone).toISO();
+      const s = DateTime.fromISO(b.start).setZone(timezone).toISO() ?? "";
+      const e = DateTime.fromISO(b.end).setZone(timezone).toISO() ?? "";
       return { start: s, end: e };
     });
 

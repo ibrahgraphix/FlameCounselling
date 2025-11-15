@@ -1,8 +1,12 @@
-// src/utils/timeUtils.ts
+// @ts-ignore: avoid missing declaration file for luxon in environments where @types/luxon isn't installed
 import { DateTime, Interval } from "luxon";
 
 export type BusyRange = { start: string; end: string };
 
+/**
+ * Generate time slots for a given date (YYYY-MM-DD) in timezone, excluding busyRanges.
+ * Returns array of { startISO, endISO, label }.
+ */
 export function generateTimeSlots(
   dateISO: string,
   workingStart: string,
