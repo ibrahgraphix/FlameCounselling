@@ -52,7 +52,7 @@ if (clientBuildPath) {
 // Health check
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-const PORT = process.env.FRONTEND_PORT || 3030;
+const PORT = process.env.FRONTEND_PORT || 7070;
 https.createServer(sslOptions, app).listen(PORT, () => {
   console.log(
     `Frontend server listening on https://flamestudentcouncil.in:${PORT}`

@@ -5,7 +5,7 @@ import { setAuthToken } from "@/services/api";
 
 const API_BASE: string =
   (import.meta.env.VITE_API_BASE as string) ||
-  "https://flamestudentcouncil.in:5050";
+  "https://flamestudentcouncil.in:4000";
 
 export type User = {
   id: number;

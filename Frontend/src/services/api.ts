@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "@/components/ui/sonner";
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "https://flamestudentcouncil.in:5050";
+  import.meta.env.VITE_API_URL || "https://flamestudentcouncil.in:4000";
 const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,

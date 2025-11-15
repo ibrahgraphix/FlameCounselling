@@ -12,7 +12,7 @@ const sslOptions = {
   key: fs.readFileSync("/opt/View/sslcertificates/council.key"),
 };
 
-const PORT = process.env.PORT || 5050;
+const PORT = process.env.PORT || 4000;
 https.createServer(sslOptions, app).listen(PORT, () => {
   console.log(`Server listening on https://flamestudentcouncil.in:${PORT}`);
 });
