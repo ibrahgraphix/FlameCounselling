@@ -1,4 +1,4 @@
-// server.ts (front-end server, placed outside src folder)
+// Frontserver.ts (front-end server, now in Backend folder)
 import express from "express";
 import https from "https";
 import path from "path";
@@ -20,12 +20,13 @@ const sslOptions = {
   key: fs.readFileSync("/opt/View/sslcertificates/council.key"),
 };
 
-// Find the client build directory
+// Find the client build directory (adjusted for sibling Frontend folder)
+const frontendDir = path.join(__dirname, "..", "Frontend");
 const buildCandidates: string[] = [
-  path.join(__dirname, "client", "dist"), // monorepo client/dist
-  path.join(__dirname, "client", "build"), // CRA convention
-  path.join(__dirname, "dist"), // simple root dist
-  path.join(__dirname, "public"), // fallback public
+  path.join(frontendDir, "dist"), // Vite monorepo client/dist
+  path.join(frontendDir, "build"), // CRA convention
+  path.join(frontendDir, "dist"), // simple root dist (duplicate for safety)
+  path.join(frontendDir, "public"), // fallback public
 ];
 
 const clientBuildPath = buildCandidates.find(
