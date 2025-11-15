@@ -7,7 +7,7 @@ import bookingRepository from "../repositories/bookingRepository";
 import { studentRepository } from "../repositories/studentRepository";
 // @ts-ignore - avoid immediate build error if luxon types are not installed
 import { DateTime } from "luxon";
-import { generateTimeSlots, BusyRange } from "../utils/timeUtils";
+import { generateTimeSlots } from "../utils/timeUtils";
 import pool from "../config/db";
 
 // import canonical scopes from authService so we don't duplicate scope definitions
