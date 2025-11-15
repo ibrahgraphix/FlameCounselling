@@ -421,9 +421,45 @@ const GoogleCalendarService = {
     // Resolve or create student row
     let finalStudentId: number | null = null;
     try {
+      // CASE A: student_id provided (may be internal student_id or external flame_id)
       if (typeof student_id !== "undefined" && student_id !== null) {
-        finalStudentId = student_id;
+        // Try to resolve by either internal student_id or flame_id
+        const sRes = await pool.query(
+          `SELECT student_id FROM students WHERE student_id = $1 OR flame_id = $1 LIMIT 1`,
+          [student_id]
+        );
+        if (sRes.rows && sRes.rows.length > 0) {
+          finalStudentId = sRes.rows[0].student_id;
+        } else if (student_email) {
+          // If not found, but email present — create a new student and attach flame_id to the created row
+          const guestName =
+            (student_email && student_email.split("@")[0]) || "Guest Student";
+          const createdStudent = await studentRepository.create(
+            guestName,
+            student_email
+          );
+          finalStudentId = createdStudent.student_id;
+          // store the external id (flame_id) for future lookups
+          try {
+            await pool.query(
+              `UPDATE students SET flame_id = $1 WHERE student_id = $2`,
+              [student_id, finalStudentId]
+            );
+          } catch (e) {
+            // non-fatal if update fails (e.g. constraint); just warn
+            console.warn(
+              "Failed to persist flame_id to new student row:",
+              e?.message ?? e
+            );
+          }
+        } else {
+          // student_id provided but not found and no email to create a student — fail early
+          throw new Error(
+            `Provided student identifier (${student_id}) not found in students table. Provide a valid student_id/flame_id that exists or include student_email to create a student.`
+          );
+        }
       } else if (student_email) {
+        // CASE B: no id provided — find by email or create
         const found = await studentRepository.findByEmail(student_email);
         if (found && found.student_id) {
           finalStudentId = found.student_id;
