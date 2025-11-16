@@ -74,16 +74,6 @@ export const findByEmail = async (email: string): Promise<any | null> => {
   }
 };
 
-/**
- * createCounselor
- * Inserts a new counselor row and returns the normalized row.
- * passwordHash can be null when creating from Google sign-in.
- *
- * This function first attempts the insert with created_at/updated_at (which
- * matches recent migrations). If the table doesn't have those columns,
- * Postgres returns error 42703 (undefined_column) — in that case we retry
- * with a simpler INSERT that omits created_at/updated_at.
- */
 export const createCounselor = async (
   name: string | null,
   email: string,
@@ -189,13 +179,6 @@ export const findCounselorByOAuthState = async (state: string) => {
   }
 };
 
-/**
- * storeGoogleTokens
- * Saves access + refresh tokens and expiry into the counselors table.
- *
- * expiryDate may come from Google as milliseconds since epoch (number) or a string.
- * Convert to a proper ISO timestamp so Postgres can store it in a TIMESTAMP/TIMESTAMPTZ column.
- */
 export const storeGoogleTokens = async (
   counselorId: number,
   accessToken: string | null,
