@@ -27,6 +27,9 @@ const Header: React.FC = () => {
   const textColor = isDark ? "text-gray-300" : "text-gray-700";
   const hoverColor = isDark ? "hover:text-teal-400" : "hover:text-[#1e3a8a]";
 
+  // control sheet open state to programmatically close
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+
   return (
     <header
       className={`sticky top-0 z-50 border-b shadow-sm backdrop-blur-md ${bgColor}`}
@@ -37,7 +40,6 @@ const Header: React.FC = () => {
           to={user ? (isAdmin() ? "/admin" : "/dashboard") : "/"}
           className="flex items-center gap-2"
         >
-          {/* responsive logo sizes for mobile -> desktop */}
           <img
             src="/Assets/FLAME.png"
             alt="Flame Counseling"
@@ -91,7 +93,6 @@ const Header: React.FC = () => {
                 Appointments
               </Link>
 
-              {/* user avatar dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -131,9 +132,12 @@ const Header: React.FC = () => {
 
         {/* Mobile menu trigger */}
         <div className="md:hidden flex items-center gap-2">
-          {/* If logged in show small avatar, else menu */}
           {user ? (
-            <Link to="/appointments" className="mr-2">
+            <Link
+              to="/appointments"
+              className="mr-2"
+              onClick={() => setSheetOpen(false)}
+            >
               <Avatar className="h-9 w-9">
                 <AvatarImage
                   src={user?.avatar ?? ""}
@@ -144,9 +148,17 @@ const Header: React.FC = () => {
             </Link>
           ) : null}
 
-          <Sheet>
+          <Sheet
+            open={sheetOpen}
+            onOpenChange={(val) => setSheetOpen(Boolean(val))}
+          >
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+                onClick={() => setSheetOpen(true)}
+              >
                 <Menu className={`h-6 w-6 ${textColor}`} />
               </Button>
             </SheetTrigger>
@@ -159,6 +171,7 @@ const Header: React.FC = () => {
                 <Link
                   to={user ? (isAdmin() ? "/admin" : "/dashboard") : "/"}
                   className="flex items-center"
+                  onClick={() => setSheetOpen(false)}
                 >
                   <img
                     src="/Assets/FLAME.png"
@@ -166,11 +179,11 @@ const Header: React.FC = () => {
                     className="h-12 w-auto"
                   />
                 </Link>
+
                 <Button
                   variant="ghost"
-                  onClick={() => {
-                    /* sheet will close automatically */
-                  }}
+                  onClick={() => setSheetOpen(false)}
+                  aria-label="Close menu"
                 >
                   Close
                 </Button>
@@ -182,28 +195,36 @@ const Header: React.FC = () => {
                     <Link
                       to="/"
                       className="py-2 px-2 rounded-md hover:bg-gray-100"
+                      onClick={() => setSheetOpen(false)}
                     >
                       Home
                     </Link>
                     <Link
                       to="/gamezone"
                       className="py-2 px-2 rounded-md hover:bg-gray-100"
+                      onClick={() => setSheetOpen(false)}
                     >
                       GameZone
                     </Link>
                     <Link
                       to="/about"
                       className="py-2 px-2 rounded-md hover:bg-gray-100"
+                      onClick={() => setSheetOpen(false)}
                     >
                       About
                     </Link>
                     <Link
                       to="/contact"
                       className="py-2 px-2 rounded-md hover:bg-gray-100"
+                      onClick={() => setSheetOpen(false)}
                     >
                       Contact
                     </Link>
-                    <Link to="/login" className="mt-2">
+                    <Link
+                      to="/login"
+                      className="mt-2"
+                      onClick={() => setSheetOpen(false)}
+                    >
                       <Button
                         style={{ background: gradient }}
                         className="w-full"
@@ -217,17 +238,22 @@ const Header: React.FC = () => {
                     <Link
                       to="/appointments"
                       className="py-2 px-2 rounded-md hover:bg-gray-100"
+                      onClick={() => setSheetOpen(false)}
                     >
                       Appointments
                     </Link>
                     <Link
                       to="/profile"
                       className="py-2 px-2 rounded-md hover:bg-gray-100"
+                      onClick={() => setSheetOpen(false)}
                     >
                       Profile
                     </Link>
                     <button
-                      onClick={logout}
+                      onClick={() => {
+                        setSheetOpen(false);
+                        logout();
+                      }}
                       className="text-left py-2 px-2 rounded-md hover:bg-gray-100"
                     >
                       Logout

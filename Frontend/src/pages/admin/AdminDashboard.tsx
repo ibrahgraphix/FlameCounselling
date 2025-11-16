@@ -184,10 +184,6 @@ const AdminDashboard: React.FC = () => {
                   >
                     {analytics.userCount}
                   </div>
-                  <div className="text-xs mt-1" style={{ color: PRIMARY }}>
-                    +{analytics.userCount - analytics.activeUsers} new this
-                    month
-                  </div>
                 </div>
                 <div
                   className="rounded-md p-2"
@@ -222,9 +218,6 @@ const AdminDashboard: React.FC = () => {
                     style={{ color: isDark ? "#e6eefc" : undefined }}
                   >
                     {analytics.appointments.upcoming}
-                  </div>
-                  <div className="text-xs mt-1" style={{ color: PRIMARY }}>
-                    {analytics.appointments.total} total sessions
                   </div>
                 </div>
                 <div
@@ -261,9 +254,6 @@ const AdminDashboard: React.FC = () => {
                   >
                     {analytics.blogPosts}
                   </div>
-                  <div className="text-xs mt-1" style={{ color: PRIMARY }}>
-                    8 filled this month
-                  </div>
                 </div>
                 <div
                   className="rounded-md p-2"
@@ -298,9 +288,6 @@ const AdminDashboard: React.FC = () => {
                     style={{ color: isDark ? "#e6eefc" : undefined }}
                   >
                     {analytics.communityPosts}
-                  </div>
-                  <div className="text-xs mt-1" style={{ color: PRIMARY }}>
-                    {analytics.appointments.total} total appointments
                   </div>
                 </div>
                 <div

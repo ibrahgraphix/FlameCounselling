@@ -28,6 +28,7 @@ import { format, parseISO, isValid as isValidDate, addDays } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useDarkMode } from "@/contexts/Darkmode";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Maybe<T> = T | null | undefined;
 
@@ -51,12 +52,9 @@ type BookingItem = {
   userId?: number | string | null;
   student_email?: string | null;
   student_id?: number | null;
-  // server might already include a flag indicating notes (per-booking)
   session_note_exists?: boolean;
-  note_count?: number; // MAY be server-side total per student — do NOT treat as per-booking
-  // local client flags
+  note_count?: number;
   notes_filled?: boolean;
-  // optional: attach matched note created_at for display/debug
   session_note_created_at?: string | null;
   [k: string]: any;
 };
@@ -75,6 +73,7 @@ type SessionNote = {
 const BookingList: React.FC = () => {
   const { user } = useAuth() as any;
   const { darkMode } = useDarkMode();
+  const isMobile = useIsMobile();
 
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -140,13 +139,11 @@ const BookingList: React.FC = () => {
     if (!s) return null;
     const str = String(s);
     try {
-      // If the string contains timezone or 'T' iso marker, let Date parse it (may produce local time)
       if (str.includes("T") || str.endsWith("Z")) {
         const d = new Date(str);
         if (!isNaN(d.getTime())) return d;
       }
 
-      // "YYYY-MM-DD HH:mm:ss" — we treat this as UTC-ish by appending Z to avoid environment-specific local parse issues.
       const reYMDHMS = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
       if (reYMDHMS.test(str)) {
         const iso = str.replace(" ", "T") + "Z";
@@ -154,16 +151,13 @@ const BookingList: React.FC = () => {
         if (!isNaN(d.getTime())) return d;
       }
 
-      // date-only "YYYY-MM-DD" -> interpret as local date at midnight by creating a Date with constructor that uses local values.
       const reYMD = /^\d{4}-\d{2}-\d{2}$/;
       if (reYMD.test(str)) {
         const [y, m, dN] = str.split("-").map(Number);
-        // Use new Date(year, monthIndex, date) to create local-midnight
         const d = new Date(y, m - 1, dN);
         if (!isNaN(d.getTime())) return d;
       }
 
-      // fallback: try Date parse
       const d2 = new Date(str);
       if (!isNaN(d2.getTime())) return d2;
     } catch {}
@@ -185,18 +179,13 @@ const BookingList: React.FC = () => {
 
     if (!dateOnly) return null;
 
-    // If booking record includes both date and time, combine them into local Date:
-    // If booking_date is an ISO string with T, parsing will handle time component.
     try {
-      // If booking_date already contains time/T, parse directly
       if (String(dateOnly).includes("T")) {
         const d = parseToDate(String(dateOnly));
         if (d) return toLocalYMD(d);
       }
 
-      // If user provided booking_date as "YYYY-MM-DD" and booking_time like "10:00" or "10:00:00":
       if (timeOnly && /^\d{1,2}:\d{2}(:\d{2})?$/.test(String(timeOnly))) {
-        // Construct local date-time using local Date constructor to avoid timezone conversion issues
         const [y, m, dd] = String(dateOnly).split("-").map(Number);
         const [hh, mm, ss] = String(timeOnly)
           .split(":")
@@ -205,31 +194,24 @@ const BookingList: React.FC = () => {
         if (!isNaN(d.getTime())) return toLocalYMD(d);
       }
 
-      // Fallback: parse dateOnly with parseToDate (it returns local-midnight for YYYY-MM-DD)
       const d2 = parseToDate(String(dateOnly));
       if (d2) return toLocalYMD(d2);
-    } catch (e) {
-      // ignore and fallback
-    }
+    } catch (e) {}
     return null;
   };
 
-  // Mark bookings with session_note_exists if a session note matches student/id/email and same local date
-  // NOTE: We DO NOT mark bookings without a date by old notes (to avoid carrying over notes).
   const markNotesOnBookings = (
     bookingsArr: BookingItem[],
     notesArr: SessionNote[]
   ) => {
     if (!Array.isArray(bookingsArr)) return bookingsArr;
     if (!Array.isArray(notesArr) || notesArr.length === 0) {
-      // Keep any existing client-side notes_filled flags; don't accidentally set true.
       return bookingsArr.map((b) => ({
         ...b,
         session_note_exists: b.session_note_exists ?? b.notes_filled ?? false,
       }));
     }
 
-    // Precompute note local dates for efficient comparison
     const notesWithLocalDate = notesArr.map((n) => {
       const noteSource = n.created_at ?? n.session_datetime ?? null;
       const noteDateObj = parseToDate(noteSource);
@@ -240,15 +222,13 @@ const BookingList: React.FC = () => {
     const mapped = bookingsArr.map((b) => {
       const bStudentId = getStudentIdFromBooking(b);
       const bEmail = (getStudentEmailFromBooking(b) || "").toLowerCase();
-      const bLocalDate = getBookingLocalDate(b); // local YYYY-MM-DD or null
+      const bLocalDate = getBookingLocalDate(b);
 
-      // If booking has a date — require same local-date note
       if (bLocalDate) {
         const found = notesWithLocalDate.find((n) => {
           if (!n._noteLocalDate) return false;
           if (n._noteLocalDate !== bLocalDate) return false;
 
-          // date matches — now match by student_id OR email
           if (bStudentId && n.student_id && Number(n.student_id) === bStudentId)
             return true;
           if (bEmail && (n as any).student_email) {
@@ -269,7 +249,6 @@ const BookingList: React.FC = () => {
         };
       }
 
-      // If booking has no date, DO NOT match older notes — keep previous state or client filled flag
       return {
         ...b,
         session_note_exists: b.session_note_exists ?? b.notes_filled ?? false,
@@ -279,23 +258,19 @@ const BookingList: React.FC = () => {
     return mapped;
   };
 
-  // Fetch session notes for counselor and mark bookings accordingly
   const fetchAndMarkSessionNotes = async (bookingsArr?: BookingItem[]) => {
     try {
       const resp = await api.get("/api/session-notes");
       const notes = Array.isArray(resp?.data) ? resp.data : [];
       setSessionNotes(notes);
-      // update bookings using either provided bookingsArr or current bookings
       const target = bookingsArr ?? bookings;
       const updated = markNotesOnBookings(target, notes);
       setBookings(updated);
     } catch (err) {
-      // silently ignore — no notes available or not authorized
       console.warn("Could not fetch session-notes:", err);
     }
   };
 
-  // Load bookings on mount / when user changes
   useEffect(() => {
     const fetchBookings = async () => {
       setLoading(true);
@@ -381,7 +356,6 @@ const BookingList: React.FC = () => {
   const handleAction = async (bookingId: string | number, action: string) => {
     setActionLoadingId(bookingId);
     try {
-      // Map UI action -> booking status value
       const statusToSet =
         action === "confirm"
           ? "confirmed"
@@ -397,7 +371,6 @@ const BookingList: React.FC = () => {
         (res && (res.status ?? (res.booking && res.booking.status))) ||
         statusToSet;
 
-      // update locally
       setBookings((prev) =>
         prev.map((b) =>
           String(b.booking_id ?? b.id) === String(bookingId)
@@ -406,7 +379,6 @@ const BookingList: React.FC = () => {
         )
       );
 
-      // show toast
       if (action === "confirm") toast.success("Booking confirmed");
       else if (action === "complete") toast.success("Booking marked completed");
       else if (action === "cancel") toast.success("Booking cancelled");
@@ -419,7 +391,6 @@ const BookingList: React.FC = () => {
     }
   };
 
-  // Open the reschedule UI for a booking (preloads date + counselor id)
   const openRescheduleUI = (b: BookingItem) => {
     const id = b.booking_id ?? b.id;
     setRescheduleBookingId(id);
@@ -429,7 +400,6 @@ const BookingList: React.FC = () => {
       ) || null;
     setRescheduleCounselorId(counselorId ?? null);
 
-    // Preselect current booking date if valid
     const dateString = b.booking_date ?? b.date;
     let parsedDate: Date | undefined = undefined;
     if (dateString) {
@@ -442,7 +412,6 @@ const BookingList: React.FC = () => {
     setRescheduleSelectedTime(b.booking_time ?? b.time ?? "");
   };
 
-  // Cancel / close the reschedule UI
   const closeRescheduleUI = () => {
     setRescheduleBookingId(null);
     setRescheduleCounselorId(null);
@@ -524,7 +493,6 @@ const BookingList: React.FC = () => {
 
   // --- Notes modal helpers ---
   const openNotesModalForBooking = (b: BookingItem) => {
-    // Extract student name/email and counselor name
     const studentName =
       (b.student_name as string) ??
       (b.userName as string) ??
@@ -533,7 +501,6 @@ const BookingList: React.FC = () => {
       "";
     const studentEmail =
       (b.student_email as string) ?? (b.email as string) ?? "";
-    // Counselor name: if logged-in user has a name, prefer that; else use booking counselorName
     const counselorName =
       (user && (user.name || (user as any).full_name || user.email)) ??
       b.counselorName ??
@@ -544,8 +511,6 @@ const BookingList: React.FC = () => {
     setModalStudentName(String(studentName ?? ""));
     setModalStudentEmail(String(studentEmail ?? ""));
     setModalCounselorName(String(counselorName ?? ""));
-
-    // For a new note, start with client current time (will be replaced with DB created_at after save)
     setModalDateTime(new Date().toISOString());
     setModalNotes("");
     setNotesModalOpen(true);
@@ -562,8 +527,6 @@ const BookingList: React.FC = () => {
     setNotesSaving(false);
   };
 
-  // Save session note and refresh notes/bookings mapping
-  // ALSO: automatically mark booking as completed (call updateBookingStatus)
   const saveSessionNoteFromModal = async () => {
     if (!modalBooking) {
       toast.error("Booking context missing");
@@ -587,14 +550,11 @@ const BookingList: React.FC = () => {
     try {
       const payload = {
         student_id: Number(studentId),
-        // keep session_datetime from client, server will also set created_at
         session_datetime: new Date().toISOString(),
         notes: modalNotes.trim(),
       };
 
-      // POST to existing API route (protected)
       const resp = await api.post("/api/session-notes", payload);
-
       const created = resp?.data ?? null;
       const bookingKey = modalBooking.booking_id ?? modalBooking.id ?? "";
 
@@ -604,13 +564,11 @@ const BookingList: React.FC = () => {
       ) {
         toast.success("Session note saved");
 
-        // If server returned created_at, use it. Otherwise fall back to returned session_datetime or client time.
         const createdAt =
           created?.created_at ??
           created?.session_datetime ??
           new Date().toISOString();
 
-        // mark booking locally as having a note (so UI updates immediately)
         setBookings((prev) =>
           prev.map((b) =>
             String(b.booking_id ?? b.id) === String(bookingKey)
@@ -624,14 +582,11 @@ const BookingList: React.FC = () => {
           )
         );
 
-        // re-fetch session notes from server and re-mark bookings (persistence across reload)
         await fetchAndMarkSessionNotes();
 
-        // --- Automatically mark booking as completed ---
         try {
           setActionLoadingId(bookingKey);
           await updateBookingStatus(bookingKey, "completed");
-          // update local status to completed
           setBookings((prev) =>
             prev.map((b) =>
               String(b.booking_id ?? b.id) === String(bookingKey)
@@ -645,7 +600,6 @@ const BookingList: React.FC = () => {
             "Failed to mark booking completed after saving note:",
             err
           );
-          // still mark locally so UI reflects completion even if server call failed
           setBookings((prev) =>
             prev.map((b) =>
               String(b.booking_id ?? b.id) === String(bookingKey)
@@ -664,7 +618,6 @@ const BookingList: React.FC = () => {
         return;
       }
 
-      // some servers may return success with 200
       if (resp?.data) {
         toast.success("Session note saved");
 
@@ -689,7 +642,6 @@ const BookingList: React.FC = () => {
 
         await fetchAndMarkSessionNotes();
 
-        // mark completed as above
         try {
           setActionLoadingId(bookingKey2);
           await updateBookingStatus(bookingKey2, "completed");
@@ -737,28 +689,19 @@ const BookingList: React.FC = () => {
     }
   };
 
-  // Determine whether booking has a note (server or local) - used for UI
-  // Uses local date comparison for accuracy across timezones.
+  // Determine whether booking has a note (server or local)
   const hasNoteForBooking = (b: BookingItem) => {
     if (b.session_note_exists) return true;
     if ((b as any).hasSessionNote) return true;
-    if ((b as any).notes_filled) return true; // client-side flag after save
+    if ((b as any).notes_filled) return true;
 
     const bStudentId = getStudentIdFromBooking(b);
     const bEmail = getStudentEmailFromBooking(b);
-    const bLocalDate = getBookingLocalDate(b); // local YYYY-MM-DD or null
+    const bLocalDate = getBookingLocalDate(b);
 
-    if (!bStudentId && !bEmail) {
-      // No reliable identifier to match — don't assume note exists.
-      return false;
-    }
+    if (!bStudentId && !bEmail) return false;
+    if (!bLocalDate) return false;
 
-    if (!bLocalDate) {
-      // For bookings without a date we do NOT match past notes.
-      return false;
-    }
-
-    // find a session note that matches student/email and same local date
     const found = sessionNotes.find((n) => {
       const noteSource = n.created_at ?? n.session_datetime ?? null;
       const noteObj = parseToDate(noteSource);
@@ -784,10 +727,8 @@ const BookingList: React.FC = () => {
     user && String(user.role).toLowerCase() === "admin"
       ? "All Bookings"
       : "My Bookings";
-
   const isAdminUser = user && String(user.role).toLowerCase() === "admin";
 
-  // helper for status classes that look right both in light/dark modes
   const statusClass = (status?: string) => {
     const s = (status ?? "pending").toString().toLowerCase();
     if (s === "confirmed")
@@ -802,13 +743,139 @@ const BookingList: React.FC = () => {
       return darkMode
         ? "bg-indigo-900 text-indigo-300"
         : "bg-indigo-100 text-indigo-700";
-    // cancelled / other
     return darkMode ? "bg-red-900 text-red-300" : "bg-red-100 text-red-700";
+  };
+
+  // Render helpers for mobile card
+  const BookingCard: React.FC<{ b: BookingItem }> = ({ b }) => {
+    const id = b.booking_id ?? b.id;
+    const studentName = b.student_name ?? b.userName ?? "Unknown";
+    const year = b.year_level ?? b.year ?? "—";
+    const dateRaw = b.booking_date ?? b.date;
+    const timeRaw = b.booking_time ?? b.time;
+    const status =
+      (b.status ?? b.booking_status ?? "pending")?.toString() ?? "pending";
+
+    let datePretty = dateRaw;
+    try {
+      if (dateRaw) {
+        const pd = parseToDate(String(dateRaw));
+        if (pd) datePretty = format(pd, "MMM d, yyyy");
+        else datePretty = String(dateRaw);
+      }
+    } catch (e) {
+      datePretty = dateRaw ?? "";
+    }
+
+    const noteExists = hasNoteForBooking(b);
+    const isCompleted = String(status).toLowerCase() === "completed";
+
+    return (
+      <div
+        className={cn(
+          "rounded-lg shadow-sm p-4 mb-4",
+          darkMode ? "bg-slate-800 text-slate-100" : "bg-white text-slate-900"
+        )}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-medium truncate">{studentName}</h3>
+              <span
+                className={`text-xs px-2 py-1 rounded-full ${statusClass(
+                  status
+                )}`}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </span>
+            </div>
+            <div className="mt-2 text-sm text-muted-foreground">
+              <div>
+                <strong>Date:</strong> {datePretty || "—"}
+              </div>
+              <div>
+                <strong>Time:</strong> {timeRaw || "—"}
+              </div>
+              <div>
+                <strong>Year:</strong> {year}
+              </div>
+            </div>
+            {noteExists && (
+              <div className="mt-2 text-xs text-green-500">
+                Session note exists
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleAction(id as any, "confirm")}
+              disabled={
+                actionLoadingId === id ||
+                isCompleted ||
+                status === "confirmed" ||
+                status === "cancelled" ||
+                status === "canceled"
+              }
+            >
+              Confirm
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openRescheduleUI(b)}
+              disabled={
+                actionLoadingId === id ||
+                isCompleted ||
+                status === "cancelled" ||
+                status === "canceled"
+              }
+            >
+              Reschedule
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleAction(id as any, "complete")}
+              disabled={
+                actionLoadingId === id ||
+                isCompleted ||
+                status === "cancelled" ||
+                status === "canceled"
+              }
+            >
+              Completed
+            </Button>
+
+            {!noteExists ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openNotesModalForBooking(b)}
+                disabled={isCompleted || actionLoadingId === id}
+              >
+                Notes
+              </Button>
+            ) : (
+              <Button variant="ghost" size="sm" disabled>
+                Filled
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
     <div
-      className="p-6 space-y-6 min-h-screen"
+      className="p-4 sm:p-6 space-y-6 min-h-screen"
       style={{ background: darkMode ? "#0f1724" : "white" }}
     >
       <div className="flex items-center justify-between">
@@ -826,7 +893,7 @@ const BookingList: React.FC = () => {
         </div>
       </div>
 
-      {/* Inline Reschedule Panel (shows when rescheduleBookingId is set) */}
+      {/* Reschedule panel */}
       {rescheduleBookingId && (
         <Card>
           <CardHeader>
@@ -834,7 +901,6 @@ const BookingList: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Calendar */}
               <div className="md:col-span-1">
                 <div className="space-y-2">
                   <label
@@ -864,7 +930,6 @@ const BookingList: React.FC = () => {
                 </div>
               </div>
 
-              {/* Timeslots */}
               <div className="md:col-span-2">
                 <div className="space-y-4">
                   <div>
@@ -964,7 +1029,15 @@ const BookingList: React.FC = () => {
             >
               No bookings found.
             </div>
+          ) : isMobile ? (
+            // Mobile: render card list
+            <div>
+              {bookings.map((b) => (
+                <BookingCard key={String(b.booking_id ?? b.id)} b={b} />
+              ))}
+            </div>
           ) : (
+            // Desktop/table view (unchanged)
             <Table>
               <TableHeader>
                 <TableRow>
@@ -993,7 +1066,6 @@ const BookingList: React.FC = () => {
                   let datePretty = dateRaw;
                   try {
                     if (dateRaw) {
-                      // parse as ISO date if possible (we display local pretty)
                       const pd = parseToDate(String(dateRaw));
                       if (pd) datePretty = format(pd, "MMM d, yyyy");
                       else datePretty = String(dateRaw);
@@ -1003,8 +1075,6 @@ const BookingList: React.FC = () => {
                   }
 
                   const noteExists = hasNoteForBooking(b);
-
-                  // Disable all actions when booking is completed
                   const isCompleted =
                     String(status).toLowerCase() === "completed";
 
@@ -1085,7 +1155,6 @@ const BookingList: React.FC = () => {
                             Completed
                           </Button>
 
-                          {/* Notes button - disabled if note exists OR booking is completed */}
                           {!noteExists ? (
                             <Button
                               variant="ghost"
