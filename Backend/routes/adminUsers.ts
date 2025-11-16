@@ -5,8 +5,14 @@ import adminController from "../controllers/adminusersController";
 
 const router = express.Router();
 
-// Protect everything: admin-only inside controller will be validated
+// Protect everything: require auth middleware (controller will enforce admin)
 router.use(requireAuth);
+
+// GET /api/admin/users
+router.get("/users", adminController.getUsers);
+
+// POST /api/admin/users
+router.post("/users", adminController.createUser);
 
 // PATCH /api/admin/users/:role/:id/status
 router.patch("/users/:role/:id/status", adminController.updateStatus);
