@@ -7,7 +7,6 @@ import {
   deleteUser,
   createUser as apiCreateUser,
 } from "@/services/api";
-import api from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -70,55 +69,16 @@ const AdminUsers: React.FC = () => {
   const [newRole, setNewRole] = useState<"admin" | "counselor">("admin");
   const [addingUser, setAddingUser] = useState(false);
 
-  // Add: track a network error state so we can show Retry button
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  // Helper: robust fetch wrapper with fallback to explicit /api/* endpoints
-  async function fetchWithFallback<T>(
-    primary: () => Promise<T>,
-    fallbackUrl?: string
-  ): Promise<T> {
-    try {
-      return await primary();
-    } catch (err: any) {
-      // If 404 or message mentions "non-existent route" try fallback
-      const status = err?.response?.status;
-      const msg = (err?.message || "").toString();
-      const shouldTryFallback =
-        status === 404 ||
-        /non-?existent route/i.test(msg) ||
-        /not found/i.test(msg);
-
-      console.warn("Primary fetch failed:", err?.response ?? err);
-      if (!shouldTryFallback || !fallbackUrl) throw err;
-
-      try {
-        const resp = await api.get(fallbackUrl);
-        return resp.data as T;
-      } catch (e2) {
-        console.error("Fallback fetch also failed:", e2);
-        throw e2;
-      }
-    }
-  }
-
   useEffect(() => {
-    let mounted = true;
     const fetchUsers = async () => {
-      setLoading(true);
-      setLoadError(null);
       try {
-        // 1) fetch counselors (primary)
-        const counselors = (await fetchWithFallback(
-          () => getCounselors(),
-          "/api/counselors"
-        )) as any[];
+        setLoading(true);
 
-        // 2) fetch all users (primary) - try getUsers(1000) first
-        const allUsers = (await fetchWithFallback(
-          () => getUsers(1000),
-          "/api/users?limit=1000"
-        )) as any[];
+        // fetch counselors (primary source)
+        const counselors = (await getCounselors()) || [];
+
+        // fetch all users (may include students/counselors/admins) but we only keep admins from it
+        const allUsers = (await getUsers(1000)) || [];
 
         // Extract admins from allUsers
         const admins = (allUsers || [])
@@ -138,6 +98,7 @@ const AdminUsers: React.FC = () => {
               a.avatar ??
               (name ? makeAvatar(name) : makeAvatar(email ?? "admin"));
 
+            // status fallback
             const statusRaw =
               (a.status ?? a.raw?.status ?? "active")
                 ?.toString()
@@ -187,6 +148,8 @@ const AdminUsers: React.FC = () => {
 
         // Merge admins + counselors, dedupe by id (admins should be kept as admin)
         const mergedMap = new Map<string, User>();
+
+        // Put admins first (so if same id appears in counselors, admin role is preserved)
         for (const a of admins) {
           if (!a.id) continue;
           mergedMap.set(a.id, a);
@@ -198,33 +161,17 @@ const AdminUsers: React.FC = () => {
 
         const merged = Array.from(mergedMap.values());
 
-        if (mounted) {
-          setUsers(merged);
-          setLoadError(null);
-        }
-      } catch (error: any) {
-        console.error("Error fetching users (safe-handled):", error);
-        // Do not throw — show toast and friendly UI with Retry
-        const userMessage =
-          error?.response?.data?.error ??
-          error?.message ??
-          "Failed to load users. Click Retry.";
-        toast.error("Could not load users");
-        if (mounted) {
-          setUsers([]); // ensure it's an array (prevents blank UI)
-          setLoadError(String(userMessage));
-        }
+        setUsers(merged);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        toast.error("Failed to load users");
+        setUsers([]);
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     };
 
     fetchUsers();
-
-    return () => {
-      mounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // filter users
@@ -244,6 +191,7 @@ const AdminUsers: React.FC = () => {
   const handleActivateUser = async (user: User) => {
     if (!window.confirm(`Activate ${user.name}?`)) return;
     try {
+      // Use the user's role (admin or counselor)
       await updateUserStatus(
         user.role === "user" ? "student" : user.role,
         user.id,
@@ -303,6 +251,7 @@ const AdminUsers: React.FC = () => {
   const handleAddUser = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
+    // Basic validation
     if (!newName.trim()) {
       toast.error("Name is required");
       return;
@@ -320,6 +269,7 @@ const AdminUsers: React.FC = () => {
         role: newRole,
       });
 
+      // Normalise the returned user to the shape we use in the table
       const id = String(
         created?.id ??
           created?.user_id ??
@@ -341,6 +291,7 @@ const AdminUsers: React.FC = () => {
         raw: created,
       };
 
+      // append to top of the table
       setUsers((prev) => [userObj, ...prev]);
       toast.success("User added");
       setShowAddModal(false);
@@ -361,89 +312,6 @@ const AdminUsers: React.FC = () => {
   const summaryBg = isDark ? "bg-gray-800/50" : "bg-white";
   const summaryIconBg = isDark ? "bg-blue-900/20" : "bg-blue-50";
   const summaryIconColor = isDark ? "text-blue-400" : "text-blue-600";
-
-  // Retry loader
-  const retryLoad = async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      // trigger useEffect fetch logic by calling the same wrapped endpoints
-      const counselors = (await fetchWithFallback(
-        () => getCounselors(),
-        "/api/counselors"
-      )) as any[];
-      const allUsers = (await fetchWithFallback(
-        () => getUsers(1000),
-        "/api/users?limit=1000"
-      )) as any[];
-
-      const admins = (allUsers || [])
-        .filter((u: any) => {
-          const roleStr = (u.role ?? u.raw?.role ?? u.role_name ?? "")
-            .toString()
-            .toLowerCase();
-          return roleStr === "admin" || roleStr === "administrator";
-        })
-        .map((a: any) => {
-          const id = String(a.id ?? a.userId ?? a.admin_id ?? a.adminId ?? "");
-          const name = a.name ?? a.full_name ?? a.email ?? id;
-          const email = a.email ?? "";
-          const avatar =
-            a.avatar ??
-            (name ? makeAvatar(name) : makeAvatar(email ?? "admin"));
-          const statusRaw =
-            (a.status ?? a.raw?.status ?? "active")?.toString().toLowerCase() ??
-            "active";
-          const status: User["status"] =
-            statusRaw === "inactive" ? "inactive" : "active";
-          return {
-            id,
-            name,
-            email,
-            avatar,
-            role: "admin" as User["role"],
-            status,
-          } as User;
-        });
-
-      const mappedCounselors: User[] = (counselors || []).map(
-        (c: any, idx: number) => {
-          const id = String(c.id ?? c.counselor_id ?? c.raw?.id ?? `c-${idx}`);
-          const name = c.name ?? c.full_name ?? c.raw?.name ?? id;
-          const email = c.email ?? c.raw?.email ?? "";
-          const avatar =
-            c.avatar ??
-            (name ? makeAvatar(name) : makeAvatar(email ?? `counselor-${id}`));
-          const statusRaw =
-            (c.status ?? c.raw?.status ?? "active")?.toString().toLowerCase() ??
-            "active";
-          const status: User["status"] =
-            statusRaw === "inactive" ? "inactive" : "active";
-          return { id, name, email, avatar, role: "counselor", status } as User;
-        }
-      );
-
-      const mergedMap = new Map<string, User>();
-      for (const a of admins) {
-        if (!a.id) continue;
-        mergedMap.set(a.id, a);
-      }
-      for (const c of mappedCounselors) {
-        if (!c.id) continue;
-        if (!mergedMap.has(c.id)) mergedMap.set(c.id, c);
-      }
-      const merged = Array.from(mergedMap.values());
-      setUsers(merged);
-      setLoadError(null);
-    } catch (err: any) {
-      console.error("Retry failed:", err);
-      setUsers([]);
-      setLoadError(err?.message ?? "Retry failed");
-      toast.error("Retry failed");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className={`min-h-screen pt-6 pb-16 ${bgColor}`}>
@@ -569,18 +437,6 @@ const AdminUsers: React.FC = () => {
               <div className={`py-32 flex justify-center ${mutedColor}`}>
                 <Loader2 className="h-8 w-8 animate-spin text-mindease-primary" />
               </div>
-            ) : loadError ? (
-              <div className={`py-20 text-center ${mutedColor}`}>
-                <p
-                  className="text-muted-foreground mb-4"
-                  style={{ color: isDark ? "#cbd5e1" : undefined }}
-                >
-                  {loadError}
-                </p>
-                <div className="flex justify-center gap-2">
-                  <Button onClick={retryLoad}>Retry</Button>
-                </div>
-              </div>
             ) : filteredUsers.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -610,13 +466,17 @@ const AdminUsers: React.FC = () => {
                           <div>
                             <div
                               className="font-medium"
-                              style={{ color: isDark ? "#e6eefc" : undefined }}
+                              style={{
+                                color: isDark ? "#e6eefc" : undefined,
+                              }}
                             >
                               {user.name}
                             </div>
                             <div
                               className="text-xs text-muted-foreground"
-                              style={{ color: isDark ? "#cbd5e1" : undefined }}
+                              style={{
+                                color: isDark ? "#cbd5e1" : undefined,
+                              }}
                             >
                               {user.email}
                             </div>
