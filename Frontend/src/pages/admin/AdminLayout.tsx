@@ -1,3 +1,4 @@
+// src/layouts/AdminLayout.tsx
 import React, { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,17 +9,21 @@ import {
   Notebook,
   Settings,
   LogOut,
-  MenuIcon,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useDetectDarkMode } from "@/components/ui/card";
 
+/**
+ * AdminLayout: responsive admin layout.
+ * Sidebar collapses on md+ and becomes top header on small screens.
+ */
 const AdminLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const isDark = useDetectDarkMode();
-  const [collapsed, setCollapsed] = useState<boolean>(true); // collapsed by default on md+
+  const [collapsed, setCollapsed] = useState<boolean>(true);
 
   const role = (user?.role ?? "").toString().toLowerCase();
 
@@ -32,13 +37,13 @@ const AdminLayout: React.FC = () => {
     navigation = [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "Users", href: "/admin/users", icon: UsersIcon },
-      { name: "Booking List", href: "/admin/bookinglist", icon: MenuIcon },
+      { name: "Booking List", href: "/admin/bookinglist", icon: Menu },
       { name: "Settings", href: "/admin/settings", icon: Settings },
     ];
   } else if (role === "counselor") {
     navigation = [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-      { name: "Booking List", href: "/admin/bookinglist", icon: MenuIcon },
+      { name: "Booking List", href: "/admin/bookinglist", icon: Menu },
       { name: "Calendar", href: "/admin/calendar", icon: Calendar },
       { name: "Session Notes", href: "/admin/notes", icon: Notebook },
       { name: "Settings", href: "/admin/settings", icon: Settings },
@@ -71,14 +76,11 @@ const AdminLayout: React.FC = () => {
     ? "bg-gray-700 text-white"
     : "bg-white text-blue-800";
   const iconColor = isDark ? "text-gray-300" : "text-white";
-  const linkColor = isDark
-    ? "text-gray-400 hover:text-white"
-    : "text-blue-100 hover:text-white";
 
   return (
     <div className={`min-h-screen flex flex-col md:flex-row ${bgColor}`}>
-      {/* Sidebar */}
-      <div
+      {/* Sidebar (on md+) */}
+      <aside
         onMouseEnter={() => setCollapsed(false)}
         onMouseLeave={() => setCollapsed(true)}
         className={`w-full ${
@@ -87,20 +89,30 @@ const AdminLayout: React.FC = () => {
         aria-expanded={!collapsed}
       >
         <div className="h-full flex flex-col">
-          {/* ===== Logo - small screens (always visible on small screens) ===== */}
+          {/* Mobile top bar (visible only on small screens) */}
           <div
-            className={`p-4 md:hidden border-b ${borderColor} flex items-center justify-center`}
+            className={`p-3 md:hidden flex items-center justify-between border-b ${borderColor}`}
           >
-            <Link to="/" className="flex items-center justify-center">
+            <Link to="/" className="flex items-center gap-3">
               <img
                 src="/Assets/FLAME1.png"
-                alt="Flame Counseling Logo"
-                className="h-16 w-auto transition-transform duration-200 hover:scale-105"
+                alt="logo"
+                className="h-10 w-auto"
               />
+              <span className="font-semibold">Flame</span>
             </Link>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={() => setCollapsed((c) => !c)}>
+                <Menu />
+              </Button>
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={user?.avatar ?? ""} alt={user?.name ?? ""} />
+                <AvatarFallback>{user?.name?.charAt(0) ?? "A"}</AvatarFallback>
+              </Avatar>
+            </div>
           </div>
 
-          {/* ===== Logo - md+ (centered when sidebar expanded; hidden when collapsed) ===== */}
+          {/* Logo area for md+ */}
           {!collapsed && (
             <div
               className={`hidden md:flex p-6 border-b ${borderColor} items-center justify-center`}
@@ -108,8 +120,8 @@ const AdminLayout: React.FC = () => {
               <Link to="/" className="flex items-center justify-center">
                 <img
                   src="/Assets/FLAME1.png"
-                  alt="Flame Counseling Logo"
-                  className="h-20 w-auto transition-transform duration-200 hover:scale-105"
+                  alt="Flame Logo"
+                  className="h-16 w-auto"
                 />
               </Link>
             </div>
@@ -123,11 +135,9 @@ const AdminLayout: React.FC = () => {
               }`}
             >
               <Avatar
-                className={`h-10 w-10 mr-3 border-white ${
-                  isDark ? "bg-gray-700" : ""
-                }`}
+                className={`h-10 w-10 mr-3 ${isDark ? "bg-gray-700" : ""}`}
               >
-                <AvatarImage src={user?.avatar} alt={user?.name} />
+                <AvatarImage src={user?.avatar ?? ""} alt={user?.name ?? ""} />
                 <AvatarFallback
                   className={isDark ? "text-gray-300" : "text-white"}
                 >
@@ -160,6 +170,7 @@ const AdminLayout: React.FC = () => {
           <nav className="flex-1 p-2 md:p-4 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
+              const Icon = item.icon;
               return (
                 <Link
                   key={item.name}
@@ -169,7 +180,7 @@ const AdminLayout: React.FC = () => {
                     isActive ? navActive : navInactive
                   } ${collapsed ? "justify-center" : ""}`}
                 >
-                  <item.icon
+                  <Icon
                     className={`mr-3 h-5 w-5 flex-shrink-0 ${
                       isActive
                         ? isDark
@@ -204,16 +215,16 @@ const AdminLayout: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* Main Content */}
-      <div
+      <main
         className={`flex-1 overflow-auto ${
           isDark ? "bg-gray-900" : "bg-white"
         } transition-all duration-200`}
       >
         <Outlet />
-      </div>
+      </main>
     </div>
   );
 };

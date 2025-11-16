@@ -1,19 +1,42 @@
-import * as React from "react"
+// src/hooks/use-mobile.tsx
+import * as React from "react";
 
-const MOBILE_BREAKPOINT = 768
+const MOBILE_BREAKPOINT = 768;
 
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+/**
+ * Returns true when window width is less than MOBILE_BREAKPOINT.
+ * Initializes to false (safe for SSR/hydration) and updates on mount.
+ */
+export function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
+    const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    // initial value on mount
+    check();
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
 
-  return !!isMobile
+    // Prefer addEventListener if available
+    const handler = () => check();
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", handler);
+    } else if (typeof (mql as any).addListener === "function") {
+      (mql as any).addListener(handler);
+    }
+
+    window.addEventListener("resize", handler);
+
+    return () => {
+      if (typeof mql.removeEventListener === "function") {
+        mql.removeEventListener("change", handler);
+      } else if (typeof (mql as any).removeListener === "function") {
+        (mql as any).removeListener(handler);
+      }
+      window.removeEventListener("resize", handler);
+    };
+  }, []);
+
+  return isMobile;
 }
+
+export default useIsMobile;

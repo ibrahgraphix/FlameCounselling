@@ -1,8 +1,9 @@
+// src/components/Footer.tsx
 import React from "react";
 import { Link } from "react-router-dom";
 import { useDetectDarkMode } from "@/components/ui/card";
 
-const Footer = () => {
+const Footer: React.FC = () => {
   const isDark = useDetectDarkMode();
   const gradient = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)";
   const textMuted = isDark ? "text-gray-400" : "text-gray-600";
@@ -12,11 +13,11 @@ const Footer = () => {
 
   return (
     <footer
-      className={`py-12 px-6 ${borderColor} shadow-inner rounded-t-3xl ${bgColor}`}
+      className={`py-8 px-4 sm:px-6 ${borderColor} shadow-inner rounded-t-3xl ${bgColor}`}
     >
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Brand */}
-        <div>
+        <div className="flex flex-col items-start md:items-start">
           <Link to="/" className="inline-block">
             <span
               style={{
@@ -24,18 +25,18 @@ const Footer = () => {
                 WebkitBackgroundClip: "text",
                 color: "transparent",
               }}
-              className="text-3xl font-bold drop-shadow-sm"
+              className="text-2xl sm:text-3xl font-bold"
             >
               FLAME
             </span>
             <span
               style={{ color: "#1e3a8a" }}
-              className="text-3xl font-bold drop-shadow-sm ml-1"
+              className="text-2xl sm:text-3xl font-bold ml-1"
             >
               Counseling
             </span>
           </Link>
-          <p className={`mt-4 text-sm leading-relaxed ${textMuted}`}>
+          <p className={`mt-3 text-sm leading-relaxed ${textMuted}`}>
             Empowering students to connect with counselors and make informed
             academic decisions.
           </p>
@@ -43,7 +44,7 @@ const Footer = () => {
 
         {/* Quick Links */}
         <div>
-          <h3 className={`text-md font-semibold mb-4 ${accentColor}`}>
+          <h3 className={`text-md font-semibold mb-3 ${accentColor}`}>
             Quick Links
           </h3>
           <ul className="space-y-2 text-sm">
@@ -67,7 +68,7 @@ const Footer = () => {
 
         {/* Services */}
         <div>
-          <h3 className={`text-md font-semibold mb-4 ${accentColor}`}>
+          <h3 className={`text-md font-semibold mb-3 ${accentColor}`}>
             Services
           </h3>
           <ul className="space-y-2 text-sm">
@@ -89,10 +90,10 @@ const Footer = () => {
 
         {/* Contact */}
         <div>
-          <h3 className={`text-md font-semibold mb-4 ${accentColor}`}>
+          <h3 className={`text-md font-semibold mb-3 ${accentColor}`}>
             Contact
           </h3>
-          <ul className="space-y-2 text-sm" className={textMuted}>
+          <ul className={`space-y-2 text-sm ${textMuted}`}>
             <li>flamecounseling@gmail.com</li>
             <li>+91 9876543210</li>
             <li>Chandragupta West Wing, Flame</li>
@@ -100,9 +101,9 @@ const Footer = () => {
         </div>
       </div>
 
-      <div className={`mt-10 pt-6 border-t text-center ${borderColor}`}>
+      <div className={`mt-8 pt-6 border-t text-center ${borderColor}`}>
         <p className={`text-xs ${textMuted}`}>
-          © {new Date().getFullYear()} FLAMECounseling. All rights reserved.
+          © {new Date().getFullYear()} FLAME Counseling. All rights reserved.
         </p>
       </div>
     </footer>
