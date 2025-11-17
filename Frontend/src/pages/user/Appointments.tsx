@@ -1106,16 +1106,6 @@ const Appointments: React.FC = () => {
                                     >
                                       Cancel
                                     </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() =>
-                                        openReschedule(appointment)
-                                      }
-                                      className="w-full sm:w-auto"
-                                    >
-                                      Reschedule
-                                    </Button>
                                   </>
                                 )}
                               </div>
