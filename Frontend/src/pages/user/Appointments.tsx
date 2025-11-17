@@ -457,9 +457,11 @@ const Appointments: React.FC = () => {
 
   // -------------------- STUDENT LOOKUP (on blur) --------------------
   // Calls your server proxy at: [API_BASE]/api/student-lookup?code=...
+  // (server proxy should call https://studenttracking.in:5173/employee?code=... and return JSON)
   const lookupStudentById = async (code: string) => {
     if (!code || String(code).trim() === "") return;
     try {
+      // NOTE: endpoint path assumed to be /api/student-lookup on your backend
       const resp = await api.get("/api/student-lookup", {
         params: { code: String(code).trim() },
       });
@@ -470,8 +472,10 @@ const Appointments: React.FC = () => {
         return;
       }
 
+      // Accept array or single object
       const row = Array.isArray(data) ? data[0] : data;
 
+      // Map common fields from EmployeeStudentMaster / student API
       const nameCandidates = [
         row?.EmployeeName,
         row?.student_name,
@@ -500,6 +504,7 @@ const Appointments: React.FC = () => {
       if (batch) setYear(String(batch));
       toast.success("Student information auto-filled");
     } catch (err: any) {
+      // helpful console logs for debugging (proxy/server will often print more)
       console.error("Student lookup error:", err);
       if (err?.response) {
         console.error(
@@ -576,8 +581,10 @@ const Appointments: React.FC = () => {
         fetchMyAppointments().catch(() => {});
       }, 700);
 
+      // Remove booked slot locally so it disappears immediately
       setAvailableSlots((prev) => prev.filter((s) => s !== selectedTime));
 
+      // Refresh slots from backend shortly after
       setTimeout(() => {
         if (selectedCounselorId && selectedDate) {
           getAvailableSlots(
@@ -773,6 +780,7 @@ const Appointments: React.FC = () => {
         apptDay.setHours(0, 0, 0, 0);
         return apptDay.getTime() < today.getTime();
       }
+      // fallback to Date constructor
       const parsed = new Date(String(dateStr));
       if (!isNaN(parsed.getTime())) {
         const today = new Date();
@@ -798,15 +806,12 @@ const Appointments: React.FC = () => {
   // -------------------- UI --------------------
   return (
     <div className="min-h-screen pt-6 pb-16 bg-white">
-      <div className="mindease-container px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <h1
-            className="page-heading text-lg sm:text-2xl"
-            style={{ color: PRIMARY }}
-          >
+      <div className="mindease-container">
+        <div className="mb-8">
+          <h1 className="page-heading" style={{ color: PRIMARY }}>
             Therapy Appointments
           </h1>
-          <p className="text-sm sm:text-base text-gray-600">
+          <p className="text-gray-600">
             Schedule and manage your therapy sessions with our licensed
             professionals.
           </p>
@@ -815,24 +820,14 @@ const Appointments: React.FC = () => {
         <Tabs
           value={activeTab}
           onValueChange={(val) => setActiveTab(val)}
-          className="space-y-6"
+          className="space-y-8"
         >
-          {/* Tabs list: responsive horizontal scroll on mobile */}
-          <div className="overflow-x-auto pb-2 -mx-4 sm:mx-0">
-            <TabsList className="inline-flex gap-2 px-4 sm:px-0">
-              <TabsTrigger value="upcoming" className="min-w-[110px]">
-                Upcoming
-              </TabsTrigger>
-              <TabsTrigger value="past" className="min-w-[110px]">
-                Past
-              </TabsTrigger>
-              <TabsTrigger value="book" className="min-w-[110px]">
-                Book New
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
+            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+            <TabsTrigger value="past">Past</TabsTrigger>
+            <TabsTrigger value="book">Book New</TabsTrigger>
+          </TabsList>
 
-          {/* UPCOMING */}
           <TabsContent value="upcoming" className="animate-in fade-in">
             <Card>
               <CardHeader>
@@ -861,14 +856,13 @@ const Appointments: React.FC = () => {
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {/* Calendar area */}
-                            <div className="sm:col-span-1">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="md:col-span-1">
                               <div className="space-y-2">
                                 <Label className="text-sm font-medium">
                                   Select a Date
                                 </Label>
-                                <div className="border rounded-md p-2">
+                                <div className="border rounded-md p-3">
                                   <Calendar
                                     mode="single"
                                     selected={rescheduleSelectedDate}
@@ -879,13 +873,13 @@ const Appointments: React.FC = () => {
                                       date < new Date() ||
                                       date > addDays(new Date(), 30)
                                     }
-                                    className={cn("w-full")}
+                                    className={cn("mx-auto rounded-md")}
                                   />
                                 </div>
                               </div>
                             </div>
 
-                            <div className="sm:col-span-2">
+                            <div className="md:col-span-2">
                               <div className="space-y-4">
                                 <div>
                                   <Label className="text-sm font-medium">
@@ -894,72 +888,37 @@ const Appointments: React.FC = () => {
                                   <div className="mt-2">
                                     {rescheduleSelectedDate ? (
                                       rescheduleAvailableSlots.length > 0 ? (
-                                        <>
-                                          {/* mobile: horizontal scroll chips / desktop: grid */}
-                                          <div className="sm:hidden flex gap-2 overflow-x-auto pb-2">
-                                            {rescheduleAvailableSlots.map(
-                                              (slot, idx) => (
-                                                <button
-                                                  key={idx}
-                                                  className={cn(
-                                                    "min-w-max border rounded-full py-2 px-3 text-sm transition-colors",
-                                                    rescheduleSelectedTime ===
-                                                      slot
-                                                      ? `${GRADIENT_CLASS} text-white border-transparent`
-                                                      : "hover:border-[rgba(30,58,138,0.12)]"
-                                                  )}
-                                                  onClick={() =>
-                                                    setRescheduleSelectedTime(
-                                                      slot
-                                                    )
-                                                  }
-                                                  style={
-                                                    rescheduleSelectedTime ===
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                                          {rescheduleAvailableSlots.map(
+                                            (slot, idx) => (
+                                              <button
+                                                key={idx}
+                                                className={cn(
+                                                  "border rounded-md py-2 px-3 text-sm transition-colors",
+                                                  rescheduleSelectedTime ===
                                                     slot
-                                                      ? {
-                                                          backgroundImage: `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`,
-                                                        }
-                                                      : undefined
-                                                  }
-                                                >
-                                                  {slot}
-                                                </button>
-                                              )
-                                            )}
-                                          </div>
-
-                                          <div className="hidden sm:grid grid-cols-3 md:grid-cols-4 gap-2">
-                                            {rescheduleAvailableSlots.map(
-                                              (slot, idx) => (
-                                                <button
-                                                  key={idx}
-                                                  className={cn(
-                                                    "border rounded-md py-2 px-3 text-sm transition-colors w-full",
-                                                    rescheduleSelectedTime ===
-                                                      slot
-                                                      ? `${GRADIENT_CLASS} text-white border-transparent`
-                                                      : "hover:border-[rgba(30,58,138,0.12)]"
-                                                  )}
-                                                  onClick={() =>
-                                                    setRescheduleSelectedTime(
-                                                      slot
-                                                    )
-                                                  }
-                                                  style={
-                                                    rescheduleSelectedTime ===
+                                                    ? `${GRADIENT_CLASS} text-white border-transparent`
+                                                    : `hover:border-[${PRIMARY}]`
+                                                )}
+                                                onClick={() =>
+                                                  setRescheduleSelectedTime(
                                                     slot
-                                                      ? {
-                                                          backgroundImage: `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`,
-                                                        }
-                                                      : undefined
-                                                  }
-                                                >
-                                                  {slot}
-                                                </button>
-                                              )
-                                            )}
-                                          </div>
-                                        </>
+                                                  )
+                                                }
+                                                style={
+                                                  rescheduleSelectedTime ===
+                                                  slot
+                                                    ? {
+                                                        backgroundImage: `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`,
+                                                      }
+                                                    : undefined
+                                                }
+                                              >
+                                                {slot}
+                                              </button>
+                                            )
+                                          )}
+                                        </div>
                                       ) : (
                                         <div className="border rounded-md p-6 text-center text-gray-500">
                                           No available slots for this date.
@@ -973,7 +932,7 @@ const Appointments: React.FC = () => {
                                   </div>
                                 </div>
 
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <div className="flex items-center space-x-2">
                                   <Button
                                     onClick={submitReschedule}
                                     disabled={
@@ -981,14 +940,13 @@ const Appointments: React.FC = () => {
                                       !rescheduleSelectedDate ||
                                       !rescheduleSelectedTime
                                     }
-                                    className={`${GRADIENT_CLASS} text-white w-full sm:w-auto`}
+                                    className={`${GRADIENT_CLASS} text-white`}
                                   >
                                     {rescheduleLoading ? "Saving..." : "Save"}
                                   </Button>
                                   <Button
                                     variant="ghost"
                                     onClick={cancelReschedule}
-                                    className="w-full sm:w-auto"
                                   >
                                     Cancel
                                   </Button>
@@ -1001,7 +959,7 @@ const Appointments: React.FC = () => {
                     )}
 
                     {upcomingAppointments.length > 0 ? (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         {upcomingAppointments.map((appointment, index) => {
                           const rawStatus =
                             appointment.status ??
@@ -1019,11 +977,11 @@ const Appointments: React.FC = () => {
                                   appointment.id ??
                                   index
                               )}
-                              className="flex flex-col sm:flex-row sm:items-center justify-between border rounded-lg p-4"
+                              className="flex flex-col md:flex-row md:items-center justify-between border rounded-lg p-4"
                             >
-                              <div className="flex items-start sm:items-center gap-3 w-full sm:w-auto mb-3 sm:mb-0">
+                              <div className="flex items-center space-x-4 mb-4 md:mb-0">
                                 <Avatar
-                                  className="h-12 w-12 flex-shrink-0 border"
+                                  className="h-12 w-12 border"
                                   style={{ borderColor: PRIMARY }}
                                 >
                                   <AvatarImage
@@ -1040,54 +998,43 @@ const Appointments: React.FC = () => {
                                   </AvatarFallback>
                                 </Avatar>
 
-                                <div className="flex-1 min-w-0">
+                                <div>
                                   <h3
-                                    className="font-medium truncate"
+                                    className="font-medium"
                                     style={{ color: "#111827" }}
                                   >
                                     {appointment.therapistName || "Therapist"}
                                   </h3>
-
-                                  <div className="mt-1 flex flex-wrap items-center text-sm text-gray-500 gap-2">
-                                    <div className="flex items-center gap-1">
-                                      <CalendarIcon className="h-4 w-4" />
-                                      <span className="truncate">
-                                        {formatDisplayDate(
-                                          appointment.booking_date ??
-                                            appointment.date
-                                        )}
-                                      </span>
-                                    </div>
-
-                                    <div className="flex items-center gap-1">
-                                      <Clock className="h-4 w-4" />
-                                      <span className="truncate">
-                                        {appointment.booking_time ??
-                                          appointment.time ??
-                                          "-"}
-                                      </span>
-                                    </div>
-
-                                    <div className="ml-0">
-                                      <span className="inline-block text-xs rounded-full px-2 py-1 bg-slate-100 text-slate-700">
-                                        {(
-                                          appointment.status ??
-                                          appointment.booking_status ??
-                                          "pending"
-                                        )
-                                          .toString()
-                                          .replace(/^./, (s) =>
-                                            s.toUpperCase()
-                                          )}
-                                      </span>
-                                    </div>
+                                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <CalendarIcon className="h-3 w-3" />
+                                    <span>
+                                      {formatDisplayDate(
+                                        appointment.booking_date ??
+                                          appointment.date
+                                      )}
+                                    </span>
+                                    <Clock className="h-3 w-3 ml-2" />
+                                    <span>
+                                      {appointment.booking_time ??
+                                        appointment.time ??
+                                        "-"}
+                                    </span>
+                                    <span className="ml-4 text-xs rounded-full px-2 py-1 bg-slate-100 text-slate-700">
+                                      {(
+                                        appointment.status ??
+                                        appointment.booking_status ??
+                                        "pending"
+                                      )
+                                        .toString()
+                                        .replace(/^./, (s) => s.toUpperCase())}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="flex flex-col sm:flex-row gap-2">
+                              <div className="flex space-x-3">
                                 {isCancelled ? (
-                                  <span className="text-sm px-3 py-2 rounded-md bg-red-50 text-red-600">
+                                  <span className="text-sm px-3 py-1 rounded-md bg-red-50 text-red-600">
                                     Cancelled
                                   </span>
                                 ) : (
@@ -1102,19 +1049,8 @@ const Appointments: React.FC = () => {
                                             ""
                                         )
                                       }
-                                      className="w-full sm:w-auto"
                                     >
                                       Cancel
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() =>
-                                        openReschedule(appointment)
-                                      }
-                                      className="w-full sm:w-auto"
-                                    >
-                                      Reschedule
                                     </Button>
                                   </>
                                 )}
@@ -1124,12 +1060,12 @@ const Appointments: React.FC = () => {
                         })}
                       </div>
                     ) : (
-                      <div className="py-10 text-center">
+                      <div className="py-20 text-center">
                         <p className="text-gray-500 mb-4">
                           You have no upcoming appointments.
                         </p>
                         <Button
-                          className={`${GRADIENT_CLASS} text-white w-full sm:w-auto`}
+                          className={`${GRADIENT_CLASS} text-white`}
                           onClick={() => setActiveTab("book")}
                         >
                           Book a Session
@@ -1142,7 +1078,6 @@ const Appointments: React.FC = () => {
             </Card>
           </TabsContent>
 
-          {/* PAST */}
           <TabsContent value="past">
             <Card>
               <CardHeader>
@@ -1162,7 +1097,7 @@ const Appointments: React.FC = () => {
                     />
                   </div>
                 ) : pastAppointments.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {pastAppointments.map((appointment, idx) => {
                       const rawStatus =
                         appointment.status ??
@@ -1173,11 +1108,11 @@ const Appointments: React.FC = () => {
                           key={String(
                             appointment.booking_id ?? appointment.id ?? idx
                           )}
-                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between border rounded-lg p-4"
+                          className="flex items-center justify-between border rounded-lg p-4"
                         >
-                          <div className="flex items-start sm:items-center gap-3 w-full sm:w-auto mb-3 sm:mb-0">
+                          <div className="flex items-center gap-4">
                             <Avatar
-                              className="h-12 w-12 flex-shrink-0 border"
+                              className="h-12 w-12 border"
                               style={{ borderColor: PRIMARY }}
                             >
                               <AvatarImage
@@ -1190,15 +1125,14 @@ const Appointments: React.FC = () => {
                                 {appointment.therapistName?.charAt(0) || "T"}
                               </AvatarFallback>
                             </Avatar>
-
-                            <div className="min-w-0">
+                            <div>
                               <div
-                                className="font-medium truncate"
+                                className="font-medium"
                                 style={{ color: "#111827" }}
                               >
                                 {appointment.therapistName || "Therapist"}
                               </div>
-                              <div className="text-sm text-gray-500 truncate">
+                              <div className="text-sm text-gray-500">
                                 {formatDisplayDate(
                                   appointment.booking_date ?? appointment.date
                                 )}{" "}
@@ -1209,8 +1143,7 @@ const Appointments: React.FC = () => {
                               </div>
                             </div>
                           </div>
-
-                          <div className="text-sm text-gray-500 mt-2 sm:mt-0">
+                          <div className="text-sm text-gray-500">
                             {(rawStatus ?? "pending")
                               .toString()
                               .replace(/^./, (s) => s.toUpperCase())}
@@ -1220,10 +1153,10 @@ const Appointments: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="py-10 text-center">
+                  <div className="py-20 text-center">
                     <p className="text-gray-500 mb-4">No past appointments.</p>
                     <Button
-                      className={`${GRADIENT_CLASS} text-white w-full sm:w-auto`}
+                      className={`${GRADIENT_CLASS} text-white`}
                       onClick={() => setActiveTab("book")}
                     >
                       Book a Session
@@ -1234,7 +1167,6 @@ const Appointments: React.FC = () => {
             </Card>
           </TabsContent>
 
-          {/* BOOK */}
           <TabsContent value="book" className="animate-in fade-in">
             <Card>
               <CardHeader>
@@ -1248,12 +1180,12 @@ const Appointments: React.FC = () => {
               </CardHeader>
               <CardContent>
                 {bookingStep === 1 && (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="counselor" className="text-base">
                         Select a Therapist
                       </Label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
                         {counselors.length === 0 && !isLoading ? (
                           <div className="col-span-3 text-center text-gray-500 p-6 border rounded">
                             No counselors available right now.
@@ -1263,7 +1195,7 @@ const Appointments: React.FC = () => {
                             <div
                               key={c.id}
                               className={cn(
-                                "border rounded-lg p-3 cursor-pointer transition-colors flex items-center gap-3"
+                                "border rounded-lg p-4 cursor-pointer transition-colors"
                               )}
                               onClick={() => {
                                 setSelectedCounselorId(c.id);
@@ -1273,32 +1205,36 @@ const Appointments: React.FC = () => {
                                 selectedCounselorId === c.id
                                   ? {
                                       borderColor: PRIMARY,
-                                      backgroundColor: "rgba(30,58,138,0.04)",
+                                      backgroundColor: "rgba(30,58,138,0.06)",
                                     }
                                   : undefined
                               }
                             >
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage
-                                  src={c.avatar ?? makeAvatar(c.name)}
-                                  alt={c.name}
-                                />
-                                <AvatarFallback>
-                                  {c.name?.charAt(0) ?? "C"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <h3
-                                  className="font-medium truncate"
-                                  style={{ color: "#111827" }}
-                                >
-                                  {c.name}
-                                </h3>
-                                {c.specialty && (
-                                  <p className="text-xs text-gray-500 truncate">
-                                    {c.specialty}
-                                  </p>
-                                )}
+                              <div className="flex items-center space-x-3 mb-3">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarImage
+                                    src={c.avatar ?? makeAvatar(c.name)}
+                                    alt={c.name}
+                                  />
+                                  <AvatarFallback>
+                                    {c.name?.charAt(0) ?? "C"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <h3
+                                    className="font-medium"
+                                    style={{ color: "#111827" }}
+                                  >
+                                    {c.name}
+                                  </h3>
+                                  <div className="flex flex-col gap-1">
+                                    {c.specialty && (
+                                      <p className="text-xs text-gray-500">
+                                        {c.specialty}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           ))
@@ -1309,7 +1245,7 @@ const Appointments: React.FC = () => {
                     <Button
                       onClick={() => setBookingStep(2)}
                       disabled={!selectedCounselorId}
-                      className={`${GRADIENT_CLASS} text-white w-full mt-2`}
+                      className={`${GRADIENT_CLASS} text-white w-full mt-4`}
                     >
                       Continue
                     </Button>
@@ -1317,11 +1253,11 @@ const Appointments: React.FC = () => {
                 )}
 
                 {bookingStep === 2 && (
-                  <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                       <Button
                         variant="ghost"
-                        className="-ml-1 px-2"
+                        className="mb-4 sm:mb-0 -ml-4 px-2"
                         onClick={() => setBookingStep(1)}
                       >
                         ← Back to therapists
@@ -1329,7 +1265,7 @@ const Appointments: React.FC = () => {
 
                       {selectedCounselor && (
                         <div
-                          className="flex items-center border rounded-full pl-2 pr-3 py-1"
+                          className="flex items-center border rounded-full pl-1 pr-4 py-1"
                           style={{ borderColor: PRIMARY }}
                         >
                           <Avatar className="h-8 w-8 mr-2">
@@ -1353,7 +1289,7 @@ const Appointments: React.FC = () => {
 
                     <div className="space-y-2">
                       <Label className="text-base">Select a Date</Label>
-                      <div className="border rounded-md p-2">
+                      <div className="border rounded-md p-4">
                         <Calendar
                           mode="single"
                           selected={selectedDate}
@@ -1361,7 +1297,9 @@ const Appointments: React.FC = () => {
                           disabled={(date) =>
                             date < new Date() || date > addDays(new Date(), 30)
                           }
-                          className={cn("w-full")}
+                          className={cn(
+                            "mx-auto rounded-md pointer-events-auto"
+                          )}
                         />
                       </div>
                     </div>
@@ -1372,60 +1310,31 @@ const Appointments: React.FC = () => {
                           <Label className="text-base">
                             Available Time Slots
                           </Label>
-
                           {availableSlots.length > 0 ? (
-                            <>
-                              {/* mobile: chips in horizontal scroll */}
-                              <div className="sm:hidden flex gap-2 overflow-x-auto pb-2">
-                                {availableSlots.map((slot, index) => (
-                                  <button
-                                    key={index}
-                                    className={cn(
-                                      "min-w-max border rounded-full py-2 px-3 text-sm transition-colors",
-                                      selectedTime === slot
-                                        ? `${GRADIENT_CLASS} text-white border-transparent`
-                                        : "hover:border-[rgba(30,58,138,0.12)]"
-                                    )}
-                                    onClick={() => setSelectedTime(slot)}
-                                    style={
-                                      selectedTime === slot
-                                        ? {
-                                            backgroundImage: `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`,
-                                          }
-                                        : undefined
-                                    }
-                                  >
-                                    {slot}
-                                  </button>
-                                ))}
-                              </div>
-
-                              <div className="hidden sm:grid grid-cols-3 md:grid-cols-5 gap-2">
-                                {availableSlots.map((slot, index) => (
-                                  <button
-                                    key={index}
-                                    className={cn(
-                                      "border rounded-md py-2 px-3 text-sm transition-colors w-full",
-                                      selectedTime === slot
-                                        ? `${GRADIENT_CLASS} text-white border-transparent`
-                                        : "hover:border-[rgba(30,58,138,0.12)]"
-                                    )}
-                                    onClick={() => setSelectedTime(slot)}
-                                    style={
-                                      selectedTime === slot
-                                        ? {
-                                            backgroundImage: `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`,
-                                          }
-                                        : undefined
-                                    }
-                                  >
-                                    {slot}
-                                  </button>
-                                ))}
-                              </div>
-                            </>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mt-2">
+                              {availableSlots.map((slot, index) => (
+                                <button
+                                  key={index}
+                                  className={cn(
+                                    "border rounded-md py-2 px-3 text-sm transition-colors"
+                                  )}
+                                  onClick={() => setSelectedTime(slot)}
+                                  style={
+                                    selectedTime === slot
+                                      ? {
+                                          backgroundImage: `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`,
+                                          color: "#fff",
+                                          borderColor: "transparent",
+                                        }
+                                      : undefined
+                                  }
+                                >
+                                  {slot}
+                                </button>
+                              ))}
+                            </div>
                           ) : (
-                            <div className="border rounded-md p-6 text-center text-gray-500">
+                            <div className="border rounded-md p-8 text-center text-gray-500">
                               No available slots for this date. Please select
                               another date.
                             </div>
@@ -1433,7 +1342,8 @@ const Appointments: React.FC = () => {
                         </div>
 
                         {selectedTime && (
-                          <div className="space-y-3">
+                          <div className="space-y-4">
+                            {/* Student ID (user enters) */}
                             <div className="space-y-2">
                               <Label htmlFor="studentId">
                                 Student ID / Code
@@ -1444,6 +1354,7 @@ const Appointments: React.FC = () => {
                                 value={studentId}
                                 onChange={(e) => setStudentId(e.target.value)}
                                 onBlur={() => lookupStudentById(studentId)}
+                                // allow enter for convenience
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     lookupStudentById(studentId);
@@ -1477,6 +1388,7 @@ const Appointments: React.FC = () => {
                               />
                             </div>
 
+                            {/* Year is auto-filled but editable as fallback */}
                             <div className="space-y-2">
                               <Label htmlFor="year">UG/PG Year</Label>
                               <Input
