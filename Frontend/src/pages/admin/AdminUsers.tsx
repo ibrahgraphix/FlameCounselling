@@ -263,52 +263,19 @@ const AdminUsers: React.FC = () => {
 
     try {
       setAddingUser(true);
-
-      const payload = {
+      const created = await apiCreateUser({
         name: newName.trim(),
         email: newEmail.trim(),
         role: newRole,
-      };
-
-      // === IMPORTANT: do NOT use createCounselor import.
-      // For counselors, send a direct POST to the counselors endpoint so DB writes go to `counselors` table.
-      // For admins, use existing apiCreateUser (unchanged).
-      let created: any = null;
-
-      if (newRole === "counselor") {
-        // direct fetch to counselors endpoint (keeps other code untouched)
-        const res = await fetch("/api/counselors", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          // try to parse error json, fall back to status text
-          let errBody: any = null;
-          try {
-            errBody = await res.json();
-          } catch {
-            errBody = { message: await res.text() };
-          }
-          throw new Error(
-            errBody?.error ??
-              errBody?.message ??
-              `Create failed (${res.status})`
-          );
-        }
-
-        created = await res.json();
-      } else {
-        // admin path: leave existing apiCreateUser usage intact
-        created = await apiCreateUser(payload);
-      }
+      });
 
       // Normalise the returned user to the shape we use in the table
       const id = String(
-        created?.counselor_id ?? created?.id ?? created?.user_id ?? Date.now()
+        created?.id ??
+          created?.user_id ??
+          created?.student_id ??
+          created?.counselor_id ??
+          Date.now()
       );
       const name = created?.name ?? created?.full_name ?? newName;
       const email = created?.email ?? newEmail;

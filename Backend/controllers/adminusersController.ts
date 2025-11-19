@@ -33,7 +33,12 @@ export const getUsers = async (req: Request, res: Response) => {
 
 /**
  * POST /api/admin/users
- * Creates user using usersService.createUser.
+ * Creates user. Behavior:
+ * - student => delegate to usersService.createUser (unchanged)
+ * - counselor => create in counselors table via counselorRepo.createCounselor
+ * - admin => create in counselors table (role='admin') via counselorRepo.createCounselor
+ *
+ * This avoids attempting to write to a missing `users` table.
  */
 export const createUser = async (req: Request, res: Response) => {
   try {
@@ -47,12 +52,30 @@ export const createUser = async (req: Request, res: Response) => {
         .json({ success: false, error: "name and email are required" });
     }
 
+    const normalizedRole = (role ?? "student").toString().toLowerCase();
+
     try {
-      const created = await createUserService({
-        name: String(name),
-        email: String(email),
-        role: (role ?? "student") as "admin" | "counselor" | "student",
-      });
+      let created: any = null;
+
+      if (normalizedRole === "student") {
+        // Keep previous student creation path (usersService)
+        created = await createUserService({
+          name: String(name),
+          email: String(email),
+          role: "student",
+        });
+      } else {
+        // For both counselor and admin create a record in counselors table.
+        // This avoids creating into a non-existent 'users' table.
+        // counselorRepo.createCounselor handles schema differences and unique violations.
+        created = await counselorRepo.createCounselor(
+          String(name),
+          String(email),
+          normalizedRole === "admin" ? "admin" : "counselor",
+          null
+        );
+      }
+
       return res.status(201).json({ success: true, user: created });
     } catch (err: any) {
       // map unique-violation to 409
@@ -80,8 +103,8 @@ export const createUser = async (req: Request, res: Response) => {
 /**
  * PATCH /api/admin/users/:role/:id/status
  * - for counselor -> use counselorRepo.setStatus
- * - for admin -> update users table directly
- * - student role is not handled here (per your request) — return 400
+ * - for admin -> use counselorRepo.setStatus (admins stored in counselors table)
+ * - student role -> use previous path (not implemented here) -> return 400
  */
 export const updateStatus = async (req: Request, res: Response) => {
   try {
@@ -94,7 +117,9 @@ export const updateStatus = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: "Invalid status" });
     }
 
-    if (role === "counselor") {
+    const roleLower = (role ?? "").toString().toLowerCase();
+
+    if (roleLower === "counselor" || roleLower === "admin") {
       if (typeof counselorRepo.setStatus === "function") {
         const ok = await counselorRepo.setStatus(Number(id), status);
         if (!ok)
@@ -107,20 +132,11 @@ export const updateStatus = async (req: Request, res: Response) => {
         success: false,
         error: "Counselor status update not implemented",
       });
-    } else if (role === "admin") {
-      // update users table
-      try {
-        const q = `UPDATE users SET status = $1 WHERE id = $2`;
-        const r = await pool.query(q, [status, id]);
-        if (r.rowCount === 0)
-          return res
-            .status(404)
-            .json({ success: false, error: "Admin not found" });
-        return res.json({ success: true, status });
-      } catch (err) {
-        console.error("updateStatus admin error:", err);
-        return res.status(500).json({ success: false, error: "Server error" });
-      }
+    } else if (roleLower === "student") {
+      // Students handled elsewhere in your users service — keep behavior unchanged (unsupported here)
+      return res
+        .status(400)
+        .json({ success: false, error: "Unsupported role (student)" });
     } else {
       return res
         .status(400)
@@ -135,8 +151,8 @@ export const updateStatus = async (req: Request, res: Response) => {
 /**
  * DELETE /api/admin/users/:role/:id
  * - counselor -> counselorRepo.delete
- * - admin -> delete from users table
- * - student -> unsupported by this controller (return 400)
+ * - admin -> counselorRepo.delete (admins stored in counselors table)
+ * - student -> unsupported here (return 400)
  */
 export const removeUser = async (req: Request, res: Response) => {
   try {
@@ -144,8 +160,9 @@ export const removeUser = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, error: "Forbidden" });
 
     const { role, id } = req.params;
+    const roleLower = (role ?? "").toString().toLowerCase();
 
-    if (role === "counselor") {
+    if (roleLower === "counselor" || roleLower === "admin") {
       if (typeof counselorRepo.delete === "function") {
         const ok = await counselorRepo.delete(Number(id));
         if (!ok)
@@ -157,19 +174,10 @@ export const removeUser = async (req: Request, res: Response) => {
       return res
         .status(501)
         .json({ success: false, error: "Counselor delete not implemented" });
-    } else if (role === "admin") {
-      try {
-        const q = `DELETE FROM users WHERE id = $1`;
-        const r = await pool.query(q, [id]);
-        if (r.rowCount === 0)
-          return res
-            .status(404)
-            .json({ success: false, error: "Admin not found" });
-        return res.json({ success: true });
-      } catch (err) {
-        console.error("removeUser admin error:", err);
-        return res.status(500).json({ success: false, error: "Server error" });
-      }
+    } else if (roleLower === "student") {
+      return res
+        .status(400)
+        .json({ success: false, error: "Unsupported role (student)" });
     } else {
       return res
         .status(400)
