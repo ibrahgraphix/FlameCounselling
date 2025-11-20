@@ -7,6 +7,8 @@ import { JWT_SECRET as JWT_SECRET_FROM_UTIL } from "../utils/jwt";
 import { getCounselorById } from "../repositories/counselorRepository";
 import bookingRepository from "../repositories/bookingRepository";
 import GoogleCalendarService from "../services/googleCalendarService";
+import { emailVerificationRepository } from "../repositories/emailVerificationRepository";
+import mailer from "../utils/mailer";
 
 dotenv.config();
 
@@ -26,8 +28,116 @@ const normalizeStatus = (s: string) => {
   return st;
 };
 
+const generateNumericCode = (digits = 6) => {
+  const min = 10 ** (digits - 1);
+  const max = 10 ** digits - 1;
+  return String(Math.floor(Math.random() * (max - min + 1)) + min);
+};
+
+/**
+ * Verification validity windows (milliseconds)
+ */
+const CODE_EXPIRY_MS = Number(
+  process.env.VERIFICATION_CODE_TTL_MS ?? 5 * 60 * 1000
+); // default 5 minutes
+const VERIFIED_TTL_MS = Number(process.env.VERIFIED_TTL_MS ?? 30 * 60 * 1000); // default 30 minutes after verification
+
 export const BookingController = {
-  // Public: student books (guest)
+  // New: POST /api/bookings/send-code
+  async sendVerificationCode(req: Request, res: Response) {
+    try {
+      const { email } = req.body ?? {};
+      if (!email)
+        return res
+          .status(400)
+          .json({ success: false, error: "email required" });
+
+      const code = generateNumericCode(6);
+      const expiresAt = new Date(Date.now() + CODE_EXPIRY_MS);
+
+      // Store code (upsert)
+      await emailVerificationRepository.upsertCode(
+        String(email),
+        code,
+        expiresAt
+      );
+
+      // Send email (best-effort) — we include a short message
+      const subject = "Your verification code";
+      const text = `Your verification code is: ${code}\nThis code is valid for ${Math.floor(
+        CODE_EXPIRY_MS / 60000
+      )} minute(s). If you did not request this, ignore this message.`;
+      const html = `<p>Your verification code is: <strong>${code}</strong></p><p>This code is valid for ${Math.floor(
+        CODE_EXPIRY_MS / 60000
+      )} minute(s).</p>`;
+
+      try {
+        await mailer.sendMail({ to: String(email), subject, text, html });
+      } catch (err) {
+        // Sending failed — still return success to avoid leaking transport errors to the user,
+        // but log the error so you can inspect logs and mailing configuration.
+        console.error("sendVerificationCode: mailer.sendMail failed:", err);
+      }
+
+      return res.json({ success: true, message: "Verification code sent" });
+    } catch (err: any) {
+      console.error("sendVerificationCode error:", err);
+      return res.status(500).json({ success: false, error: "Server error" });
+    }
+  },
+
+  // New: POST /api/bookings/verify-code
+  async verifyVerificationCode(req: Request, res: Response) {
+    try {
+      const { email, code } = req.body ?? {};
+      if (!email || !code)
+        return res
+          .status(400)
+          .json({ success: false, error: "email and code required" });
+
+      const row = await emailVerificationRepository.getByEmail(String(email));
+      if (!row)
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "No verification code found for this email",
+          });
+
+      if (!row.code || !row.expires_at) {
+        return res
+          .status(400)
+          .json({ success: false, error: "No pending code for this email" });
+      }
+
+      const now = new Date();
+      const expiresAt = new Date(row.expires_at);
+      if (expiresAt < now) {
+        return res.status(400).json({ success: false, error: "Code expired" });
+      }
+
+      if (String(row.code) !== String(code).trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Incorrect code" });
+      }
+
+      // mark verified
+      const updated = await emailVerificationRepository.markVerified(
+        String(email)
+      );
+      return res.json({
+        success: true,
+        message: "Email verified",
+        verified: !!updated,
+      });
+    } catch (err: any) {
+      console.error("verifyVerificationCode error:", err);
+      return res.status(500).json({ success: false, error: "Server error" });
+    }
+  },
+
+  // Public: student books (guest) — createBooking is unchanged except it now checks verification
   async createBooking(req: Request, res: Response) {
     try {
       const {
@@ -47,7 +157,33 @@ export const BookingController = {
         });
       }
 
-      // persist booking
+      // CHECK: email verification required
+      // We require that the student email has a verification row with verified=true and
+      // verified_at is recent (within VERIFIED_TTL_MS). This prevents bypass.
+      const ev = await emailVerificationRepository.getByEmail(
+        String(student_email)
+      );
+      if (!ev || !ev.verified || !ev.verified_at) {
+        return res
+          .status(401)
+          .json({
+            success: false,
+            error:
+              "Email not verified. Please request and verify the code first.",
+          });
+      }
+      const verifiedAt = new Date(ev.verified_at);
+      const now = new Date();
+      if (now.getTime() - verifiedAt.getTime() > VERIFIED_TTL_MS) {
+        return res
+          .status(401)
+          .json({
+            success: false,
+            error: "Verification expired. Request a fresh code.",
+          });
+      }
+
+      // persist booking (existing logic)
       const booking = await bookingService.createBooking({
         student_name: student_name ?? null,
         student_email: String(student_email),
@@ -84,6 +220,14 @@ export const BookingController = {
         googleCalendarError: null,
         counselor: counselor ?? null,
       };
+
+      // OPTIONAL: remove verification row for this email to force fresh verification next time
+      try {
+        await emailVerificationRepository.deleteByEmail(String(student_email));
+      } catch (err) {
+        // non-fatal
+        console.warn("Could not delete verification row after booking:", err);
+      }
 
       return res.status(201).json(responseBody);
     } catch (err: any) {
