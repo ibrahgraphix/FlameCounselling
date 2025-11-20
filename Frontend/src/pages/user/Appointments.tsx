@@ -84,7 +84,6 @@ const Appointments: React.FC = () => {
     [k: string]: any;
   }
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-
   const [selectedCounselorId, setSelectedCounselorId] = useState<number | null>(
     null
   );
@@ -97,15 +96,12 @@ const Appointments: React.FC = () => {
   const [bookingNotes, setBookingNotes] = useState<string>("");
   const [isBooking, setIsBooking] = useState<boolean>(false);
   const [bookingStep, setBookingStep] = useState<number>(1);
-
   // Student-related fields
   const [studentId, setStudentId] = useState<string>(""); // student code / EmployeeCode
   const [fullName, setFullName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [year, setYear] = useState<string>("");
-
   const [guestLoadedEmail, setGuestLoadedEmail] = useState<string | null>(null);
-
   const [rescheduleBookingId, setRescheduleBookingId] = useState<
     string | number | null
   >(null);
@@ -118,7 +114,6 @@ const Appointments: React.FC = () => {
   const [rescheduleSelectedTime, setRescheduleSelectedTime] =
     useState<string>("");
   const [rescheduleLoading, setRescheduleLoading] = useState<boolean>(false);
-
   // -------------------- Verification state --------------------
   const [verificationSent, setVerificationSent] = useState<boolean>(false);
   const [verificationCode, setVerificationCode] = useState<string>("");
@@ -127,7 +122,6 @@ const Appointments: React.FC = () => {
   const [sendingCode, setSendingCode] = useState<boolean>(false);
   const [verifyingCode, setVerifyingCode] = useState<boolean>(false);
   const [resendCooldown, setResendCooldown] = useState<number>(0); // seconds
-
   // helper to clear verification state
   const clearVerificationState = () => {
     setVerificationSent(false);
@@ -137,12 +131,10 @@ const Appointments: React.FC = () => {
     setVerifyingCode(false);
     setResendCooldown(0);
   };
-
   // when email changes manually or via student lookup, reset verification state
   useEffect(() => {
     clearVerificationState();
   }, [email]);
-
   useEffect(() => {
     let t: number | undefined;
     if (resendCooldown > 0) {
@@ -155,7 +147,6 @@ const Appointments: React.FC = () => {
       if (t) clearTimeout(t);
     };
   }, [resendCooldown]);
-
   // -------------------- helpers --------------------
   const getAppointmentKey = (a: Appointment) => {
     const idKey = a.booking_id ?? a.id;
@@ -175,7 +166,6 @@ const Appointments: React.FC = () => {
     ).trim();
     return `u:${student}|d:${date}|t:${time}|c:${counselor}`;
   };
-
   const dedupeAppointments = (arr: Appointment[] | null | undefined) => {
     if (!Array.isArray(arr)) return [];
     const map = new Map<string, Appointment>();
@@ -187,13 +177,11 @@ const Appointments: React.FC = () => {
     }
     return Array.from(map.values());
   };
-
   const detectGuestEmailFromLocalStorage = (): string | null => {
     if (typeof window === "undefined") return null;
     try {
       const last = localStorage.getItem(LAST_GUEST_EMAIL_KEY);
       if (last && last.trim() !== "") return last;
-
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (!key) continue;
@@ -203,7 +191,6 @@ const Appointments: React.FC = () => {
           return email;
         }
       }
-
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (!key) continue;
@@ -217,21 +204,18 @@ const Appointments: React.FC = () => {
     }
     return null;
   };
-
   const normalizeBookingForClient = (raw: any): Appointment => {
     if (!raw || typeof raw !== "object") return raw;
     const booking_date =
       raw.booking_date ?? raw.date ?? (raw.booking && raw.booking.booking_date);
     const booking_time =
       raw.booking_time ?? raw.time ?? (raw.booking && raw.booking.booking_time);
-
     const therapistName =
       raw.therapistName ??
       raw.therapist_name ??
       raw.counselor_name ??
       (raw.therapist && raw.therapist.name) ??
       raw.therapistName;
-
     return {
       booking_id:
         raw.booking_id ??
@@ -257,7 +241,6 @@ const Appointments: React.FC = () => {
       raw,
     } as Appointment;
   };
-
   const formatDisplayDate = (d?: string | null) => {
     if (!d) return "-";
     try {
@@ -268,7 +251,6 @@ const Appointments: React.FC = () => {
     } catch (e) {}
     return String(d);
   };
-
   const ensureGuestTokenApplied = (email?: string | null) => {
     if (!email || typeof window === "undefined") return;
     try {
@@ -283,12 +265,10 @@ const Appointments: React.FC = () => {
       // ignore
     }
   };
-
   // -------------------- fetch / boot --------------------
   const fetchMyAppointments = async () => {
     try {
       setIsLoading(true);
-
       if (user) {
         const userAppointments = await getUserAppointments(user.id);
         setAppointments(
@@ -300,12 +280,10 @@ const Appointments: React.FC = () => {
         );
         return;
       }
-
       const ownerEmail = guestLoadedEmail ?? detectGuestEmailFromLocalStorage();
       if (ownerEmail) {
         setGuestLoadedEmail(ownerEmail);
         ensureGuestTokenApplied(ownerEmail);
-
         const guestAppts = await getUserAppointments(ownerEmail);
         setAppointments(
           dedupeAppointments(
@@ -323,14 +301,11 @@ const Appointments: React.FC = () => {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         setIsLoading(true);
-
         const fetched = await getCounselors();
-
         let list: any[] = [];
         if (Array.isArray(fetched)) {
           list = fetched;
@@ -341,7 +316,6 @@ const Appointments: React.FC = () => {
         } else {
           list = [];
         }
-
         const isCounselor = (c: any) => {
           const role =
             (c.role ?? c.raw?.role ?? c.role_name ?? c.raw?.user_role ?? "")
@@ -349,9 +323,7 @@ const Appointments: React.FC = () => {
               .toLowerCase() || "";
           return role === "counselor";
         };
-
         const filteredList = list.filter(isCounselor);
-
         const normalized: Counselor[] = filteredList.map(
           (c: any, i: number) => {
             const name =
@@ -371,7 +343,6 @@ const Appointments: React.FC = () => {
           }
         );
         setCounselors(normalized);
-
         await fetchMyAppointments();
       } catch (error) {
         console.error("Error fetching initial data:", error);
@@ -380,17 +351,14 @@ const Appointments: React.FC = () => {
         setIsLoading(false);
       }
     };
-
     fetchInitialData();
   }, [user]);
-
   useEffect(() => {
     const interval = setInterval(async () => {
       await fetchMyAppointments();
     }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [user, guestLoadedEmail]);
-
   useEffect(() => {
     const fetchCounselorDetails = async () => {
       if (selectedCounselorId) {
@@ -421,7 +389,6 @@ const Appointments: React.FC = () => {
     };
     fetchCounselorDetails();
   }, [selectedCounselorId]);
-
   useEffect(() => {
     const fetchAvailableSlots = async () => {
       if (selectedCounselorId && selectedDate) {
@@ -442,10 +409,8 @@ const Appointments: React.FC = () => {
         setSelectedTime("");
       }
     };
-
     fetchAvailableSlots();
   }, [selectedCounselorId, selectedDate]);
-
   useEffect(() => {
     const fetchSlots = async () => {
       if (!rescheduleSelectedDate) {
@@ -453,7 +418,6 @@ const Appointments: React.FC = () => {
         setRescheduleSelectedTime("");
         return;
       }
-
       const booking = appointments.find(
         (a) =>
           String(a.booking_id ?? a.id) === String(rescheduleBookingId ?? "")
@@ -466,7 +430,6 @@ const Appointments: React.FC = () => {
             booking?.c_counselor_id ??
             booking?.counselorId
         ) || null;
-
       if (!counselorId) {
         setRescheduleAvailableSlots([]);
         setRescheduleSelectedTime("");
@@ -485,11 +448,9 @@ const Appointments: React.FC = () => {
         setRescheduleSelectedTime("");
       }
     };
-
     fetchSlots();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rescheduleSelectedDate, rescheduleBookingId, appointments]);
-
   // -------------------- STUDENT LOOKUP (on blur) --------------------
   // Calls your server proxy at: [API_BASE]/api/student-lookup?code=...
   const lookupStudentById = async (code: string) => {
@@ -498,15 +459,12 @@ const Appointments: React.FC = () => {
       const resp = await api.get("/api/student-lookup", {
         params: { code: String(code).trim() },
       });
-
       const data = resp?.data ?? null;
       if (!data) {
         toast.error("Student lookup returned no data");
         return;
       }
-
       const row = Array.isArray(data) ? data[0] : data;
-
       const nameCandidates = [
         row?.EmployeeName,
         row?.student_name,
@@ -523,13 +481,11 @@ const Appointments: React.FC = () => {
         row?.year_level,
         row?.Year,
       ];
-
       const name = nameCandidates.find((v) => v !== undefined && v !== null);
       const emailVal = emailCandidates.find(
         (v) => v !== undefined && v !== null
       );
       const batch = yearCandidates.find((v) => v !== undefined && v !== null);
-
       if (name) setFullName(String(name));
       if (emailVal) setEmail(String(emailVal));
       if (batch) setYear(String(batch));
@@ -549,7 +505,6 @@ const Appointments: React.FC = () => {
       );
     }
   };
-
   // -------------------- BOOKING / RESCHEDULE / CANCEL --------------------
   const handleBookAppointment = async () => {
     if (!selectedCounselorId || !selectedDate || !selectedTime) {
@@ -562,13 +517,11 @@ const Appointments: React.FC = () => {
       toast.error("Please provide your full name, email and year");
       return;
     }
-
     setIsBooking(true);
     try {
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
       const formattedTime =
         selectedTime.length === 5 ? `${selectedTime}:00` : selectedTime;
-
       const newAppointmentRaw = await bookAppointment({
         therapistId: selectedCounselorId,
         date: formattedDate,
@@ -579,16 +532,13 @@ const Appointments: React.FC = () => {
         email,
         year,
       } as any);
-
       const normalized = normalizeBookingForClient(newAppointmentRaw);
-
       const ownerKey = user ? user.id : email;
       try {
         await saveUserAppointment(ownerKey, normalized);
       } catch (e) {
         console.warn("Could not save booking locally:", e);
       }
-
       if (!user && email) {
         try {
           localStorage.setItem(LAST_GUEST_EMAIL_KEY, email);
@@ -603,16 +553,13 @@ const Appointments: React.FC = () => {
           if (fallback) setAuthToken(fallback);
         } catch (e) {}
       }
-
       setAppointments((prev) =>
         dedupeAppointments([...(prev || []), normalized])
       );
       setTimeout(() => {
         fetchMyAppointments().catch(() => {});
       }, 700);
-
       setAvailableSlots((prev) => prev.filter((s) => s !== selectedTime));
-
       setTimeout(() => {
         if (selectedCounselorId && selectedDate) {
           getAvailableSlots(
@@ -625,7 +572,6 @@ const Appointments: React.FC = () => {
             .catch(() => {});
         }
       }, 800);
-
       toast.success("Appointment booked successfully");
       setSelectedCounselorId(null);
       setSelectedCounselor(null);
@@ -639,7 +585,6 @@ const Appointments: React.FC = () => {
       setStudentId("");
       setBookingStep(1);
       setActiveTab("upcoming");
-
       // clear verification state after successful booking
       clearVerificationState();
     } catch (error) {
@@ -654,7 +599,6 @@ const Appointments: React.FC = () => {
       setIsBooking(false);
     }
   };
-
   // New: send verification code to guest email (first step)
   const sendVerificationCode = async (targetEmail?: string) => {
     const to = targetEmail ?? email;
@@ -680,7 +624,6 @@ const Appointments: React.FC = () => {
       setSendingCode(false);
     }
   };
-
   // New: verify code
   const verifyCode = async (targetEmail?: string) => {
     const to = targetEmail ?? email;
@@ -714,7 +657,6 @@ const Appointments: React.FC = () => {
       setVerifyingCode(false);
     }
   };
-
   // Combined handler replacing previous Confirm action to implement two-step flow
   const handleConfirmClick = async () => {
     // if logged in, proceed directly
@@ -722,7 +664,6 @@ const Appointments: React.FC = () => {
       await handleBookAppointment();
       return;
     }
-
     // guest flow:
     if (!verificationSent) {
       // first click: send code
@@ -733,7 +674,6 @@ const Appointments: React.FC = () => {
       await sendVerificationCode(email);
       return;
     }
-
     // verification was sent but not yet verified
     if (!verificationVerified) {
       // if user has filled a code, try to verify; otherwise prompt to enter code
@@ -749,22 +689,18 @@ const Appointments: React.FC = () => {
       await handleBookAppointment();
       return;
     }
-
     // if already verified, proceed
     if (verificationVerified) {
       await handleBookAppointment();
       return;
     }
   };
-
   const handleResend = async () => {
     if (resendCooldown > 0) return;
     await sendVerificationCode(email);
   };
-
   const openReschedule = (booking: Appointment) => {
     setRescheduleBookingId(booking.booking_id ?? booking.id ?? null);
-
     const dateStr = booking.booking_date ?? booking.date;
     if (dateStr) {
       try {
@@ -783,7 +719,6 @@ const Appointments: React.FC = () => {
     }
     setRescheduleSelectedTime(booking.booking_time ?? booking.time ?? "");
   };
-
   const submitReschedule = async () => {
     setRescheduleLoading(true);
     try {
@@ -798,7 +733,6 @@ const Appointments: React.FC = () => {
         newDate,
         rescheduleSelectedTime
       );
-
       const normalized = normalizeBookingForClient(
         updatedRaw ?? {
           booking_id: rescheduleBookingId,
@@ -842,7 +776,6 @@ const Appointments: React.FC = () => {
     setRescheduleAvailableSlots([]);
     setRescheduleSelectedTime("");
   };
-
   const handleCancel = async (bookingId: string | number) => {
     try {
       if (!user) {
@@ -851,7 +784,6 @@ const Appointments: React.FC = () => {
         ensureGuestTokenApplied(ownerEmail ?? undefined);
       }
       const res = await updateBookingStatus(bookingId, "cancelled");
-
       const normalized = normalizeBookingForClient(
         res ?? { booking_id: bookingId, status: "cancelled" }
       );
@@ -873,18 +805,15 @@ const Appointments: React.FC = () => {
         }
       }
       await fetchMyAppointments();
-
       toast.success("Appointment cancelled");
     } catch (err) {
       console.error("Cancel error:", err);
       toast.error("Could not cancel appointment");
     }
   };
-
   const isAppointmentPast = (a: Appointment): boolean => {
     const dateStr = a.booking_date ?? a.date;
     const timeStr = a.booking_time ?? a.time;
-
     if (!dateStr) return false;
     if (timeStr) {
       let normalizedTime = String(timeStr).trim();
@@ -925,17 +854,14 @@ const Appointments: React.FC = () => {
     } catch (e) {
       // ignore
     }
-
     return false;
   };
-
   // Partition into upcoming vs past based on date+time
   const pastAppointments: Appointment[] =
     appointments.filter(isAppointmentPast);
   const upcomingAppointments: Appointment[] = appointments.filter(
     (a) => !isAppointmentPast(a)
   );
-
   // -------------------- UI --------------------
   return (
     <div className="min-h-screen pt-6 pb-16 bg-white">
@@ -952,7 +878,6 @@ const Appointments: React.FC = () => {
             professionals.
           </p>
         </div>
-
         <Tabs
           value={activeTab}
           onValueChange={(val) => setActiveTab(val)}
@@ -972,7 +897,6 @@ const Appointments: React.FC = () => {
               </TabsTrigger>
             </TabsList>
           </div>
-
           {/* UPCOMING */}
           <TabsContent value="upcoming" className="animate-in fade-in">
             <Card>
@@ -1025,7 +949,6 @@ const Appointments: React.FC = () => {
                                 </div>
                               </div>
                             </div>
-
                             <div className="sm:col-span-2">
                               <div className="space-y-4">
                                 <div>
@@ -1068,7 +991,6 @@ const Appointments: React.FC = () => {
                                               )
                                             )}
                                           </div>
-
                                           <div className="hidden sm:grid grid-cols-3 md:grid-cols-4 gap-2">
                                             {rescheduleAvailableSlots.map(
                                               (slot, idx) => (
@@ -1113,7 +1035,6 @@ const Appointments: React.FC = () => {
                                     )}
                                   </div>
                                 </div>
-
                                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                   <Button
                                     onClick={submitReschedule}
@@ -1140,7 +1061,6 @@ const Appointments: React.FC = () => {
                         </CardContent>
                       </Card>
                     )}
-
                     {upcomingAppointments.length > 0 ? (
                       <div className="space-y-4">
                         {upcomingAppointments.map((appointment, index) => {
@@ -1152,7 +1072,6 @@ const Appointments: React.FC = () => {
                           const isCancelled =
                             statusKey === "cancelled" ||
                             statusKey === "canceled";
-
                           return (
                             <div
                               key={String(
@@ -1180,7 +1099,6 @@ const Appointments: React.FC = () => {
                                       "T"}
                                   </AvatarFallback>
                                 </Avatar>
-
                                 <div className="flex-1 min-w-0">
                                   <h3
                                     className="font-medium truncate"
@@ -1188,7 +1106,6 @@ const Appointments: React.FC = () => {
                                   >
                                     {appointment.therapistName || "Therapist"}
                                   </h3>
-
                                   <div className="mt-1 flex flex-wrap items-center text-sm text-gray-500 gap-2">
                                     <div className="flex items-center gap-1">
                                       <CalendarIcon className="h-4 w-4" />
@@ -1199,7 +1116,6 @@ const Appointments: React.FC = () => {
                                         )}
                                       </span>
                                     </div>
-
                                     <div className="flex items-center gap-1">
                                       <Clock className="h-4 w-4" />
                                       <span className="truncate">
@@ -1208,7 +1124,6 @@ const Appointments: React.FC = () => {
                                           "-"}
                                       </span>
                                     </div>
-
                                     <div className="ml-0">
                                       <span className="inline-block text-xs rounded-full px-2 py-1 bg-slate-100 text-slate-700">
                                         {(
@@ -1225,7 +1140,6 @@ const Appointments: React.FC = () => {
                                   </div>
                                 </div>
                               </div>
-
                               <div className="flex flex-col sm:flex-row gap-2">
                                 {isCancelled ? (
                                   <span className="text-sm px-3 py-2 rounded-md bg-red-50 text-red-600">
@@ -1272,7 +1186,6 @@ const Appointments: React.FC = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
           {/* PAST */}
           <TabsContent value="past">
             <Card>
@@ -1321,7 +1234,6 @@ const Appointments: React.FC = () => {
                                 {appointment.therapistName?.charAt(0) || "T"}
                               </AvatarFallback>
                             </Avatar>
-
                             <div className="min-w-0">
                               <div
                                 className="font-medium truncate"
@@ -1340,7 +1252,6 @@ const Appointments: React.FC = () => {
                               </div>
                             </div>
                           </div>
-
                           <div className="text-sm text-gray-500 mt-2 sm:mt-0">
                             {(rawStatus ?? "pending")
                               .toString()
@@ -1364,7 +1275,6 @@ const Appointments: React.FC = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
           {/* BOOK */}
           <TabsContent value="book" className="animate-in fade-in">
             <Card>
@@ -1436,7 +1346,6 @@ const Appointments: React.FC = () => {
                         )}
                       </div>
                     </div>
-
                     <Button
                       onClick={() => setBookingStep(2)}
                       disabled={!selectedCounselorId}
@@ -1446,7 +1355,6 @@ const Appointments: React.FC = () => {
                     </Button>
                   </div>
                 )}
-
                 {bookingStep === 2 && (
                   <div className="space-y-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -1457,7 +1365,6 @@ const Appointments: React.FC = () => {
                       >
                         ← Back to therapists
                       </Button>
-
                       {selectedCounselor && (
                         <div
                           className="flex items-center border rounded-full pl-2 pr-3 py-1"
@@ -1481,7 +1388,6 @@ const Appointments: React.FC = () => {
                         </div>
                       )}
                     </div>
-
                     <div className="space-y-2">
                       <Label className="text-base">Select a Date</Label>
                       <div className="border rounded-md p-2">
@@ -1496,14 +1402,12 @@ const Appointments: React.FC = () => {
                         />
                       </div>
                     </div>
-
                     {selectedDate && (
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label className="text-base">
                             Available Time Slots
                           </Label>
-
                           {availableSlots.length > 0 ? (
                             <>
                               {/* mobile: chips in horizontal scroll */}
@@ -1530,7 +1434,6 @@ const Appointments: React.FC = () => {
                                   </button>
                                 ))}
                               </div>
-
                               <div className="hidden sm:grid grid-cols-3 md:grid-cols-5 gap-2">
                                 {availableSlots.map((slot, index) => (
                                   <button
@@ -1562,7 +1465,6 @@ const Appointments: React.FC = () => {
                             </div>
                           )}
                         </div>
-
                         {selectedTime && (
                           <div className="space-y-3">
                             <div className="space-y-2">
@@ -1586,7 +1488,6 @@ const Appointments: React.FC = () => {
                                 auto-fill name, email and year.
                               </p>
                             </div>
-
                             <div className="space-y-2">
                               <Label htmlFor="fullName">Full Name</Label>
                               <Input
@@ -1596,7 +1497,6 @@ const Appointments: React.FC = () => {
                                 onChange={(e) => setFullName(e.target.value)}
                               />
                             </div>
-
                             <div className="space-y-2">
                               <Label htmlFor="email">Email ID</Label>
                               <Input
@@ -1607,7 +1507,6 @@ const Appointments: React.FC = () => {
                                 onChange={(e) => setEmail(e.target.value)}
                               />
                             </div>
-
                             <div className="space-y-2">
                               <Label htmlFor="year">UG/PG Year</Label>
                               <Input
@@ -1617,7 +1516,6 @@ const Appointments: React.FC = () => {
                                 onChange={(e) => setYear(e.target.value)}
                               />
                             </div>
-
                             <div className="space-y-2">
                               <Label htmlFor="notes">
                                 Additional Notes (optional)
@@ -1631,7 +1529,6 @@ const Appointments: React.FC = () => {
                                 }
                               />
                             </div>
-
                             {/* ---------- Verification UI (guest only) ---------- */}
                             {!user && (
                               <div className="space-y-2 border rounded-md p-4 bg-gray-50">
@@ -1645,7 +1542,6 @@ const Appointments: React.FC = () => {
                                       to confirm it's you.
                                     </div>
                                   </div>
-
                                   <div className="text-sm">
                                     {verificationVerified ? (
                                       <span className="inline-block px-2 py-1 rounded-full bg-green-50 text-green-700">
@@ -1662,43 +1558,34 @@ const Appointments: React.FC = () => {
                                     )}
                                   </div>
                                 </div>
-
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                  <div className="sm:col-span-2">
-                                    <Input
-                                      placeholder="Email to receive code"
-                                      value={email}
-                                      onChange={(e) => setEmail(e.target.value)}
-                                    />
-                                  </div>
-
-                                  <div className="sm:col-span-1 flex items-center gap-2">
+                                  <div className="sm:col-span-3">
                                     <Button
                                       onClick={() => {
-                                        // If code not yet sent, send it. If already sent and not verified, show hint to enter code.
-                                        if (!verificationSent) {
-                                          sendVerificationCode(email);
-                                        } else {
-                                          toast.info(
-                                            "Enter the code you received via email and click Confirm."
-                                          );
+                                        if (verificationVerified) {
+                                          toast.info("Email already verified.");
+                                          return;
                                         }
+                                        sendVerificationCode(email);
                                       }}
                                       disabled={
                                         sendingCode ||
+                                        resendCooldown > 0 ||
+                                        verificationVerified ||
                                         !email ||
                                         !email.includes("@")
                                       }
                                       className="w-full"
                                     >
-                                      {sendingCode
+                                      {verificationVerified
+                                        ? "Verified ✓"
+                                        : sendingCode
                                         ? "Sending..."
                                         : verificationSent
-                                        ? "Resend"
+                                        ? "Resend Code"
                                         : "Send Code"}
                                     </Button>
                                   </div>
-
                                   {verificationSent &&
                                     !verificationVerified && (
                                       <>
@@ -1733,7 +1620,6 @@ const Appointments: React.FC = () => {
                                               ? "Verifying..."
                                               : "Verify"}
                                           </Button>
-
                                           <Button
                                             variant="ghost"
                                             onClick={handleResend}
@@ -1746,7 +1632,6 @@ const Appointments: React.FC = () => {
                                         </div>
                                       </>
                                     )}
-
                                   {verificationVerified && (
                                     <div className="sm:col-span-3 text-sm text-green-700">
                                       Email verified. Click Confirm Booking to
@@ -1756,7 +1641,6 @@ const Appointments: React.FC = () => {
                                 </div>
                               </div>
                             )}
-
                             <Button
                               className={`${GRADIENT_CLASS} text-white w-full`}
                               // If guest & verification not yet sent: clicking Confirm will *send* the code.
