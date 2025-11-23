@@ -1,3 +1,4 @@
+// src/pages/AdminDashboard.tsx
 import React, { useEffect, useState } from "react";
 import {
   Card,
@@ -23,7 +24,7 @@ import {
 } from "recharts";
 import {
   Loader2,
-  Calendar,
+  Calendar as CalendarIcon,
   BookOpen,
   MessageSquare,
   Users,
@@ -36,6 +37,7 @@ const AdminDashboard: React.FC = () => {
     activeUsers: number;
     blogPosts: number;
     communityPosts: number;
+    bookingsToday?: number;
     moodDistribution: {
       name: string;
       excellent: number;
@@ -165,6 +167,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* === Bookings Today (replaces Total Users) === */}
           <Card
             className="rounded-3xl h-full"
             style={{ borderRadius: "1.25rem" }}
@@ -176,13 +179,13 @@ const AdminDashboard: React.FC = () => {
                     className="text-sm font-medium text-muted-foreground"
                     style={{ color: isDark ? "#cbd5e1" : undefined }}
                   >
-                    Total Users
+                    Bookings Today
                   </p>
                   <div
                     className="text-2xl font-bold mt-1"
                     style={{ color: isDark ? "#e6eefc" : undefined }}
                   >
-                    {analytics.userCount}
+                    {analytics.bookingsToday ?? 0}
                   </div>
                 </div>
                 <div
@@ -194,7 +197,7 @@ const AdminDashboard: React.FC = () => {
                     color: PRIMARY,
                   }}
                 >
-                  <Users className="h-5 w-5" />
+                  <CalendarIcon className="h-5 w-5" />
                 </div>
               </div>
             </CardContent>
@@ -229,7 +232,7 @@ const AdminDashboard: React.FC = () => {
                     color: SECONDARY,
                   }}
                 >
-                  <Calendar className="h-5 w-5" />
+                  <CalendarIcon className="h-5 w-5" />
                 </div>
               </div>
             </CardContent>

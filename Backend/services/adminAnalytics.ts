@@ -1,6 +1,11 @@
 // src/services/adminAnalyticsService.ts
 import pool from "../config/db";
 
+/**
+ * fetchSystemAnalytics
+ * Returns an analytics object used by the admin dashboard.
+ * Adds bookingsToday (number of bookings created today).
+ */
 export const fetchSystemAnalytics = async () => {
   const activeWindow = "30 days";
 
@@ -8,6 +13,9 @@ export const fetchSystemAnalytics = async () => {
   const qCounselorsCount = `SELECT COUNT(*)::int AS count FROM counselors`;
   const qSessionNotesCount = `SELECT COUNT(*)::int AS count FROM session_notes`;
   const qBookingsCount = `SELECT COUNT(*)::int AS count FROM bookings`;
+
+  // Bookings created today (server's current_date)
+  const qBookingsToday = `SELECT COUNT(*)::int AS count FROM bookings WHERE created_at::date = CURRENT_DATE`;
 
   // Compute appointments breakdown in one query (attempts to handle common status values)
   const qAppointmentsBreakdown = `
@@ -52,6 +60,7 @@ export const fetchSystemAnalytics = async () => {
     counselorsRes,
     notesRes,
     bookingsRes,
+    bookingsTodayRes,
     apptRes,
     activeUsersRes,
   ] = await Promise.all([
@@ -59,6 +68,7 @@ export const fetchSystemAnalytics = async () => {
     pool.query(qCounselorsCount),
     pool.query(qSessionNotesCount),
     pool.query(qBookingsCount),
+    pool.query(qBookingsToday),
     pool.query(qAppointmentsBreakdown),
     pool.query(qActiveUsers),
   ]);
@@ -67,6 +77,7 @@ export const fetchSystemAnalytics = async () => {
   const counselorsCount = Number(counselorsRes.rows[0]?.count ?? 0);
   const sessionNotesCount = Number(notesRes.rows[0]?.count ?? 0);
   const bookingsCount = Number(bookingsRes.rows[0]?.count ?? 0);
+  const bookingsToday = Number(bookingsTodayRes.rows[0]?.count ?? 0);
 
   const apptRow = apptRes.rows[0] ?? {};
   const appointments = {
@@ -91,6 +102,7 @@ export const fetchSystemAnalytics = async () => {
   ];
 
   return {
+    // legacy keys frontend expects
     userCount,
     activeUsers,
     // frontend currently expects blogPosts -> session notes count
@@ -99,5 +111,10 @@ export const fetchSystemAnalytics = async () => {
     communityPosts: bookingsCount,
     moodDistribution,
     appointments,
+
+    // NEW: bookings created today
+    bookingsToday,
   };
 };
+
+export default { fetchSystemAnalytics };
