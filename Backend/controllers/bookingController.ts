@@ -71,12 +71,30 @@ export const BookingController = {
         CODE_EXPIRY_MS / 60000
       )} minute(s).</p>`;
 
+      let info: any = null;
       try {
-        await mailer.sendMail({ to: String(email), subject, text, html });
+        info = await mailer.sendMail({
+          to: String(email),
+          subject,
+          text,
+          html,
+        });
+        if (!info) {
+          console.error(
+            "sendVerificationCode: mailer returned null (likely not configured)"
+          );
+          return res.status(500).json({
+            success: false,
+            error:
+              "Failed to send verification code. Please check your email settings and try again.",
+          });
+        }
       } catch (err) {
-        // Sending failed — still return success to avoid leaking transport errors to the user,
-        // but log the error so you can inspect logs and mailing configuration.
         console.error("sendVerificationCode: mailer.sendMail failed:", err);
+        return res.status(500).json({
+          success: false,
+          error: "Failed to send verification code. Please try again.",
+        });
       }
 
       return res.json({ success: true, message: "Verification code sent" });
