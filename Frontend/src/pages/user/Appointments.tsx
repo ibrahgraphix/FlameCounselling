@@ -119,6 +119,43 @@ const Appointments: React.FC = () => {
     useState<string>("");
   const [rescheduleLoading, setRescheduleLoading] = useState<boolean>(false);
 
+  // -------------------- Verification state --------------------
+  const [verificationSent, setVerificationSent] = useState<boolean>(false);
+  const [verificationCode, setVerificationCode] = useState<string>("");
+  const [verificationVerified, setVerificationVerified] =
+    useState<boolean>(false);
+  const [sendingCode, setSendingCode] = useState<boolean>(false);
+  const [verifyingCode, setVerifyingCode] = useState<boolean>(false);
+  const [resendCooldown, setResendCooldown] = useState<number>(0); // seconds
+
+  // helper to clear verification state
+  const clearVerificationState = () => {
+    setVerificationSent(false);
+    setVerificationCode("");
+    setVerificationVerified(false);
+    setSendingCode(false);
+    setVerifyingCode(false);
+    setResendCooldown(0);
+  };
+
+  // when email changes manually or via student lookup, reset verification state
+  useEffect(() => {
+    clearVerificationState();
+  }, [email]);
+
+  useEffect(() => {
+    let t: number | undefined;
+    if (resendCooldown > 0) {
+      t = window.setTimeout(
+        () => setResendCooldown((s) => Math.max(0, s - 1)),
+        1000
+      );
+    }
+    return () => {
+      if (t) clearTimeout(t);
+    };
+  }, [resendCooldown]);
+
   // -------------------- helpers --------------------
   const getAppointmentKey = (a: Appointment) => {
     const idKey = a.booking_id ?? a.id;
@@ -241,9 +278,7 @@ const Appointments: React.FC = () => {
         return;
       }
       const access = localStorage.getItem(`mindease_token_${email}`);
-      if (access) {
-        setAuthToken(access);
-      }
+      if (access) setAuthToken(access);
     } catch (e) {
       // ignore
     }
@@ -604,12 +639,127 @@ const Appointments: React.FC = () => {
       setStudentId("");
       setBookingStep(1);
       setActiveTab("upcoming");
+
+      // clear verification state after successful booking
+      clearVerificationState();
     } catch (error) {
       console.error("Error booking appointment:", error);
-      toast.error("Could not book appointment");
+      // if backend returns 401 about verification, surface it
+      if ((error as any)?.response?.data?.error) {
+        toast.error((error as any).response.data.error);
+      } else {
+        toast.error("Could not book appointment");
+      }
     } finally {
       setIsBooking(false);
     }
+  };
+
+  // New: send verification code to guest email (first step)
+  const sendVerificationCode = async (targetEmail?: string) => {
+    const to = targetEmail ?? email;
+    if (!to || !to.includes("@")) {
+      toast.error("Please provide a valid email to send verification code.");
+      return;
+    }
+    try {
+      setSendingCode(true);
+      // call backend endpoint
+      await api.post("/api/bookings/send-code", { email: to });
+      setVerificationSent(true);
+      setVerificationVerified(false);
+      setVerificationCode("");
+      setResendCooldown(60); // 60s cooldown to resend
+      toast.success("Verification code sent to your email");
+    } catch (err: any) {
+      console.error("sendVerificationCode error:", err);
+      toast.error(
+        err?.response?.data?.error ?? "Could not send verification code"
+      );
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  // New: verify code
+  const verifyCode = async (targetEmail?: string) => {
+    const to = targetEmail ?? email;
+    if (!to || !to.includes("@")) {
+      toast.error("Please provide a valid email to verify.");
+      return false;
+    }
+    if (!verificationCode || verificationCode.trim().length === 0) {
+      toast.error("Enter the verification code you received in your email.");
+      return false;
+    }
+    try {
+      setVerifyingCode(true);
+      const resp = await api.post("/api/bookings/verify-code", {
+        email: to,
+        code: verificationCode.trim(),
+      });
+      if (resp?.data?.success) {
+        setVerificationVerified(true);
+        toast.success("Email verified — you can now confirm booking");
+        return true;
+      } else {
+        toast.error(resp?.data?.error ?? "Verification failed");
+        return false;
+      }
+    } catch (err: any) {
+      console.error("verifyCode error:", err);
+      toast.error(err?.response?.data?.error ?? "Could not verify code");
+      return false;
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
+
+  // Combined handler replacing previous Confirm action to implement two-step flow
+  const handleConfirmClick = async () => {
+    // if logged in, proceed directly
+    if (user) {
+      await handleBookAppointment();
+      return;
+    }
+
+    // guest flow:
+    if (!verificationSent) {
+      // first click: send code
+      if (!email || !email.includes("@")) {
+        toast.error("Please enter a valid university email before confirming.");
+        return;
+      }
+      await sendVerificationCode(email);
+      return;
+    }
+
+    // verification was sent but not yet verified
+    if (!verificationVerified) {
+      // if user has filled a code, try to verify; otherwise prompt to enter code
+      if (!verificationCode || verificationCode.trim().length === 0) {
+        toast.info(
+          "Enter the verification code sent to your email and click Confirm again."
+        );
+        return;
+      }
+      const ok = await verifyCode(email);
+      if (!ok) return;
+      // verified — proceed to booking
+      await handleBookAppointment();
+      return;
+    }
+
+    // if already verified, proceed
+    if (verificationVerified) {
+      await handleBookAppointment();
+      return;
+    }
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    await sendVerificationCode(email);
   };
 
   const openReschedule = (booking: Appointment) => {
@@ -635,15 +785,6 @@ const Appointments: React.FC = () => {
   };
 
   const submitReschedule = async () => {
-    if (!rescheduleBookingId) return;
-    if (!rescheduleSelectedDate) {
-      toast.error("Please choose a date to reschedule to.");
-      return;
-    }
-    if (!rescheduleSelectedTime) {
-      toast.error("Please choose a time slot.");
-      return;
-    }
     setRescheduleLoading(true);
     try {
       const newDate = format(rescheduleSelectedDate, "yyyy-MM-dd");
@@ -1491,12 +1632,147 @@ const Appointments: React.FC = () => {
                               />
                             </div>
 
+                            {/* ---------- Verification UI (guest only) ---------- */}
+                            {!user && (
+                              <div className="space-y-2 border rounded-md p-4 bg-gray-50">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="text-sm font-medium">
+                                      Email Verification
+                                    </div>
+                                    <div className="text-xs text-gray-600">
+                                      We will send a one-time code to your email
+                                      to confirm it's you.
+                                    </div>
+                                  </div>
+
+                                  <div className="text-sm">
+                                    {verificationVerified ? (
+                                      <span className="inline-block px-2 py-1 rounded-full bg-green-50 text-green-700">
+                                        Verified
+                                      </span>
+                                    ) : verificationSent ? (
+                                      <span className="inline-block px-2 py-1 rounded-full bg-yellow-50 text-yellow-700">
+                                        Code sent
+                                      </span>
+                                    ) : (
+                                      <span className="inline-block px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+                                        Not verified
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                  <div className="sm:col-span-2">
+                                    <Input
+                                      placeholder="Email to receive code"
+                                      value={email}
+                                      onChange={(e) => setEmail(e.target.value)}
+                                    />
+                                  </div>
+
+                                  <div className="sm:col-span-1 flex items-center gap-2">
+                                    <Button
+                                      onClick={() => {
+                                        // If code not yet sent, send it. If already sent and not verified, show hint to enter code.
+                                        if (!verificationSent) {
+                                          sendVerificationCode(email);
+                                        } else {
+                                          toast.info(
+                                            "Enter the code you received via email and click Confirm."
+                                          );
+                                        }
+                                      }}
+                                      disabled={
+                                        sendingCode ||
+                                        !email ||
+                                        !email.includes("@")
+                                      }
+                                      className="w-full"
+                                    >
+                                      {sendingCode
+                                        ? "Sending..."
+                                        : verificationSent
+                                        ? "Resend"
+                                        : "Send Code"}
+                                    </Button>
+                                  </div>
+
+                                  {verificationSent &&
+                                    !verificationVerified && (
+                                      <>
+                                        <div className="sm:col-span-2">
+                                          <Input
+                                            placeholder="Enter verification code"
+                                            value={verificationCode}
+                                            onChange={(e) =>
+                                              setVerificationCode(
+                                                e.target.value
+                                              )
+                                            }
+                                            onKeyDown={async (e) => {
+                                              if (e.key === "Enter") {
+                                                // attempt to verify (but do not automatically book)
+                                                await verifyCode(email);
+                                              }
+                                            }}
+                                          />
+                                        </div>
+                                        <div className="sm:col-span-1 flex flex-col gap-2">
+                                          <Button
+                                            onClick={async () => {
+                                              await verifyCode(email);
+                                            }}
+                                            disabled={
+                                              verifyingCode || !verificationCode
+                                            }
+                                            className="w-full"
+                                          >
+                                            {verifyingCode
+                                              ? "Verifying..."
+                                              : "Verify"}
+                                          </Button>
+
+                                          <Button
+                                            variant="ghost"
+                                            onClick={handleResend}
+                                            disabled={resendCooldown > 0}
+                                          >
+                                            {resendCooldown > 0
+                                              ? `Resend (${resendCooldown}s)`
+                                              : "Resend Code"}
+                                          </Button>
+                                        </div>
+                                      </>
+                                    )}
+
+                                  {verificationVerified && (
+                                    <div className="sm:col-span-3 text-sm text-green-700">
+                                      Email verified. Click Confirm Booking to
+                                      finish.
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
                             <Button
                               className={`${GRADIENT_CLASS} text-white w-full`}
+                              // If guest & verification not yet sent: clicking Confirm will *send* the code.
+                              // If guest & verification sent but not verified: clicking Confirm will attempt verify+book (verify requires a code input).
+                              // If guest & verification verified: proceed to booking.
+                              // If user logged in: proceed directly.
                               disabled={
-                                !selectedDate || !selectedTime || isBooking
+                                !selectedDate ||
+                                !selectedTime ||
+                                isBooking ||
+                                (!user &&
+                                  !verificationVerified &&
+                                  verificationSent === false &&
+                                  (!email || !email.includes("@")))
                               }
-                              onClick={handleBookAppointment}
+                              onClick={handleConfirmClick}
                             >
                               {isBooking ? (
                                 <>
