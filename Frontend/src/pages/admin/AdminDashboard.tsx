@@ -345,11 +345,11 @@ const AdminDashboard: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[250px]">
+              <div className="h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={analytics.moodDistribution}
-                    margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
+                    margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
                   >
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -417,7 +417,7 @@ const AdminDashboard: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[200px] mb-4">
+              <div className="h-[150px] mb-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -438,7 +438,7 @@ const AdminDashboard: React.FC = () => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      outerRadius={80}
+                      outerRadius={60}
                       fill="#8884d8"
                       dataKey="value"
                       label={({ name, percent }) =>
@@ -457,7 +457,7 @@ const AdminDashboard: React.FC = () => {
                 </ResponsiveContainer>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {["completed", "upcoming", "cancelled"].map((key) => {
                   const val = analytics.appointments[
                     key as keyof typeof analytics.appointments
