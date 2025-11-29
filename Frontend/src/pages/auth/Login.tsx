@@ -1,3 +1,4 @@
+// src/pages/auth/Login.tsx
 // src/pages/Login.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -11,26 +12,22 @@ import axios from "axios";
 import { setAuthToken } from "@/services/api";
 import { toast } from "@/components/ui/sonner";
 import { useDetectDarkMode } from "@/components/ui/card";
-
 declare global {
   interface Window {
     google?: any;
     __googleScriptInjected__?: boolean;
   }
 }
-
 const API_BASE: string =
   (import.meta.env.VITE_API_BASE as string) ||
   "https://flamestudentcouncil.in:4000";
 const VITE_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as
   | string
   | undefined;
-
 // Theme constants
 const PRIMARY = "#1e3a8a";
 const SECONDARY = "#3b82f6";
 const GRADIENT = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)";
-
 const Login: React.FC = () => {
   const isDark = useDetectDarkMode();
   const [email, setEmail] = useState("");
@@ -39,20 +36,34 @@ const Login: React.FC = () => {
   const [error, setError] = useState("");
   const [googleReady, setGoogleReady] = useState(false);
   const [googleInitError, setGoogleInitError] = useState<string | null>(null);
-
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
-
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (authLoading) return;
+    if (user) {
+      const role = (user.role ?? "").toString().toLowerCase();
+      if (role === "admin" || role === "counselor") {
+        navigate("/admin", { replace: true });
+      } else {
+        navigate("/appointments", { replace: true });
+      }
+    }
+  }, [user, authLoading, navigate]);
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-
     try {
       const success = await login(email, password);
       if (success) {
-        navigate("/admin", { replace: true });
+        const role = (user?.role ?? "").toString().toLowerCase();
+        if (role === "admin" || role === "counselor") {
+          navigate("/admin", { replace: true });
+        } else {
+          navigate("/appointments", { replace: true });
+        }
       } else {
         setError("Invalid email or password. Please try again.");
       }
@@ -63,7 +74,6 @@ const Login: React.FC = () => {
       setIsLoading(false);
     }
   };
-
   const handleGoogleCredentialResponse = async (response: any) => {
     if (!response || !response.credential) {
       toast.error("Google sign-in failed");
@@ -78,20 +88,17 @@ const Login: React.FC = () => {
         toast.error("Google sign-in failed on server");
         return;
       }
-
       const { token, counselor } = resp.data;
       if (!token || !counselor) {
         toast.error("Invalid server response for Google sign-in");
         return;
       }
-
       try {
         localStorage.setItem("token", token);
         setAuthToken(token);
       } catch (e) {
         console.warn("Could not persist token:", e);
       }
-
       const loggedUser = {
         id: counselor.id,
         name: counselor.name,
@@ -100,19 +107,21 @@ const Login: React.FC = () => {
       };
       localStorage.setItem("mindease_user", JSON.stringify(loggedUser));
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
       toast.success(`Welcome, ${loggedUser.name || "Counselor"}!`);
-      window.location.href = "/admin";
+      const role = (loggedUser.role ?? "").toString().toLowerCase();
+      if (role === "admin" || role === "counselor") {
+        window.location.href = "/admin";
+      } else {
+        window.location.href = "/appointments";
+      }
     } catch (err: any) {
       console.error("Google signin backend error:", err);
       toast.error(err?.response?.data?.message || "Google sign-in failed");
     }
   };
-
   const injectGoogleScript = () => {
     if (typeof window === "undefined") return;
     if (window.__googleScriptInjected__) return;
-
     const s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client";
     s.async = true;
@@ -124,7 +133,6 @@ const Login: React.FC = () => {
     document.head.appendChild(s);
     window.__googleScriptInjected__ = true;
   };
-
   useEffect(() => {
     if (!VITE_GOOGLE_CLIENT_ID) {
       setGoogleInitError(
@@ -132,17 +140,13 @@ const Login: React.FC = () => {
       );
       return;
     }
-
     let cancelled = false;
     injectGoogleScript();
-
     const maxWaitMs = 8000;
     const intervalMs = 200;
     let waited = 0;
-
     const tryInit = () => {
       if (cancelled) return;
-
       if (typeof window !== "undefined" && window.google?.accounts) {
         try {
           try {
@@ -154,7 +158,6 @@ const Login: React.FC = () => {
             // already initialized maybe
             console.debug("google.accounts.id.initialize already called:", e);
           }
-
           if (googleButtonRef.current) {
             try {
               window.google.accounts.id.renderButton(googleButtonRef.current, {
@@ -182,7 +185,6 @@ const Login: React.FC = () => {
         }
         return;
       }
-
       waited += intervalMs;
       if (waited >= maxWaitMs) {
         setGoogleInitError("Google Identity Services not available");
@@ -190,13 +192,11 @@ const Login: React.FC = () => {
       }
       setTimeout(tryInit, intervalMs);
     };
-
     tryInit();
     return () => {
       cancelled = true;
     };
   }, []);
-
   const onManualGoogleClick = () => {
     if (typeof window === "undefined") return;
     if (window.google?.accounts?.id) {
@@ -210,7 +210,6 @@ const Login: React.FC = () => {
       toast.error("Google sign-in not initialized. Check console for errors.");
     }
   };
-
   const bgColor = isDark ? "bg-gray-900" : "bg-white";
   const cardBg = isDark ? "bg-gray-800" : "bg-white";
   const textColor = isDark ? "text-gray-300" : "text-gray-700";
@@ -219,13 +218,11 @@ const Login: React.FC = () => {
     ? "bg-red-900/20 border-red-800 text-red-300"
     : "bg-red-100 border-red-300 text-red-700";
   const errorBorder = isDark ? "border-red-800" : "border-red-300";
-
   // Scoped CSS fixes for the rendered Google button to avoid "two-layer" look.
   // We keep this small and targeted — overrides only the GSI classes we need.
   const googleCssOverrides = `
     /* container wrapper - align and ensure full width */
     .mindease-google-wrapper { width: 100%; display: flex; align-items: center; }
-
     /* The GSI button uses .g_id_signin on the outer control. Tidy its appearance. */
     .mindease-google-wrapper .g_id_signin {
       box-shadow: 0 2px 10px rgba(16,24,40,0.06) !important;
@@ -238,17 +235,29 @@ const Login: React.FC = () => {
       padding: 0 12px !important;
       overflow: visible !important;
     }
-
     /* Make sure the logo is aligned and scale is consistent */
     .mindease-google-wrapper .g_id_signin svg { height: 18px !important; width: 18px !important; margin-right: 10px !important; }
-
     /* Improve label weight */
     .mindease-google-wrapper .g_id_signin span { font-weight: 600 !important; color: rgba(0,0,0,0.85) !important; }
-
     /* prevent parent from showing duplicate border/shadow */
     .mindease-google-outer { border: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; }
   `;
-
+  if (authLoading) {
+    return (
+      <div
+        className="h-screen w-screen flex items-center justify-center"
+        style={{ background: GRADIENT }}
+      >
+        <div className="text-center">
+          <Loader2
+            className="h-8 w-8 animate-spin mx-auto mb-4"
+            style={{ color: PRIMARY }}
+          />
+          <p className={textColor}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div
       className={`h-screen w-screen flex items-center justify-center p-4 ${bgColor}`}
@@ -256,7 +265,6 @@ const Login: React.FC = () => {
     >
       {/* inject the small scoped overrides */}
       <style>{googleCssOverrides}</style>
-
       <div className="w-full max-w-sm">
         <Card
           className={`border shadow-xl rounded-3xl ${cardBg} w-full border-gray-200 dark:border-gray-700`}
@@ -287,7 +295,6 @@ const Login: React.FC = () => {
               </div>
             </div>
           </CardHeader>
-
           {/* content: make this a full-height flex column so inner parts stretch */}
           <CardContent
             className="flex-1 px-6 pb-6 pt-0"
@@ -321,7 +328,6 @@ const Login: React.FC = () => {
                   </div>
                 </div>
               )}
-
               <div className="space-y-2">
                 <Label htmlFor="email" className={`text-base ${textColor}`}>
                   Email
@@ -337,7 +343,6 @@ const Login: React.FC = () => {
                   style={{ borderColor: "rgba(0,0,0,0.08)" }}
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="password" className={`text-base ${textColor}`}>
                   Password
@@ -353,7 +358,6 @@ const Login: React.FC = () => {
                   style={{ borderColor: "rgba(0,0,0,0.08)" }}
                 />
               </div>
-
               <div>
                 <Button
                   type="submit"
@@ -374,7 +378,6 @@ const Login: React.FC = () => {
                   )}
                 </Button>
               </div>
-
               {/* divider */}
               <div className="flex items-center gap-2 my-0">
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
@@ -383,7 +386,6 @@ const Login: React.FC = () => {
                 </div>
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
               </div>
-
               {/* ===== Google area (Styled) ===== */}
               <div className="w-full">
                 {/* outer wrapper - remove outer chrome so the GSI button looks like one layer */}
@@ -416,7 +418,6 @@ const Login: React.FC = () => {
                     />
                   </div>
                 </div>
-
                 {/* fallback if GSI fails */}
                 {googleInitError && (
                   <div className="mt-3">
@@ -451,12 +452,10 @@ const Login: React.FC = () => {
                           d="M19.9 2.4L12 9.8l-2.5-2.1C11 6.9 11.9 6.6 12.9 6.6c1.5 0 2.9.6 3.9 1.9l3.1-3.6z"
                         />
                       </svg>
-
                       <span className="text-sm font-medium">
                         Sign in with Google
                       </span>
                     </button>
-
                     <div className="mt-2 text-xs text-red-500 text-center">
                       Google Sign-in not available: {googleInitError}
                     </div>
@@ -470,5 +469,4 @@ const Login: React.FC = () => {
     </div>
   );
 };
-
 export default Login;

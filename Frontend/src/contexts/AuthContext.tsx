@@ -1,12 +1,11 @@
+// src/contexts/AuthContext.tsx
 import React, { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { toast } from "@/components/ui/sonner";
 import { setAuthToken } from "@/services/api";
-
 const API_BASE: string =
   (import.meta.env.VITE_API_BASE as string) ||
   "https://flamestudentcouncil.in:4000";
-
 export type User = {
   id: number;
   name: string;
@@ -14,7 +13,6 @@ export type User = {
   role: string; // keep flexible, we'll compare to 'admin' or 'counselor' as strings
   avatar?: string;
 };
-
 type AuthContextType = {
   user: User | null;
   loading: boolean;
@@ -26,7 +24,6 @@ type AuthContextType = {
   // NEW: centralized Google login helper (returns true on success)
   googleLogin: (idToken: string) => Promise<boolean>;
 };
-
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
@@ -37,13 +34,11 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: () => false,
   googleLogin: async () => false,
 });
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-
   // Initialize from localStorage (persisted session)
   useEffect(() => {
     try {
@@ -69,7 +64,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(false);
     }
   }, []);
-
   // Login: call backend /api/auth/login and store token + user
   const login = async (email: string, password: string): Promise<boolean> => {
     setLoading(true);
@@ -79,7 +73,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         password,
       });
       const { token, counselor } = res.data;
-
       // IMPORTANT: use the role provided by the backend (counselor.role)
       const loggedUser: User = {
         id: counselor.id,
@@ -87,7 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         email: counselor.email,
         role: (counselor.role as string) ?? "counselor",
       };
-
       // persist token + user and set headers (both global and api instance)
       try {
         // save under the key `token` which api.ts expects
@@ -96,11 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch (e) {
         console.warn("Could not persist token:", e);
       }
-
       localStorage.setItem("mindease_user", JSON.stringify(loggedUser));
       // also set global axios header for any code using the global axios instance
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
       setUser(loggedUser);
       toast.success(`Welcome back, ${loggedUser.name}!`);
       return true;
@@ -122,7 +112,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(false);
     }
   };
-
   const register = async (
     name: string,
     email: string,
@@ -142,7 +131,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         email: counselor.email,
         role: (counselor.role as string) ?? "user",
       };
-
       try {
         localStorage.setItem("token", token);
         setAuthToken(token);
@@ -164,7 +152,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(false);
     }
   };
-
   const logout = () => {
     setUser(null);
     localStorage.removeItem("mindease_user");
@@ -174,7 +161,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setAuthToken(null);
     toast.info("You've been logged out");
   };
-
   const forgotPassword = async (email: string): Promise<boolean> => {
     setLoading(true);
     try {
@@ -193,40 +179,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(false);
     }
   };
-
   const isAdmin = () => {
     if (!user) return false;
     const role = String(user.role).toLowerCase();
     return role === "admin" || role === "counselor";
   };
-
   const googleLogin = async (idToken: string): Promise<boolean> => {
     setLoading(true);
     try {
       const resp = await axios.post(`${API_BASE}/api/auth/google`, {
         id_token: idToken,
       });
-
       // Some servers may respond with success flag + data
       const data = resp?.data ?? {};
       if (!data?.success) {
         toast.error(data?.message || "Google sign-in failed");
         return false;
       }
-
       const { token, counselor } = data;
       if (!token || !counselor) {
         toast.error("Invalid server response for Google sign-in");
         return false;
       }
-
       // Only accept counselor/admin roles (safety check)
       const role = (counselor.role ?? "").toString().toLowerCase();
       if (role !== "counselor" && role !== "admin") {
         toast.error("You are not authorized to access the counselor dashboard");
         return false;
       }
-
       // persist token + user and set headers
       try {
         localStorage.setItem("token", token);
@@ -234,7 +214,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch (e) {
         console.warn("Could not persist token:", e);
       }
-
       const loggedUser: User = {
         id: counselor.id,
         name: counselor.name,
@@ -243,7 +222,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       };
       localStorage.setItem("mindease_user", JSON.stringify(loggedUser));
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
       setUser(loggedUser);
       toast.success(`Welcome, ${loggedUser.name || "Counselor"}!`);
       return true;
@@ -267,7 +245,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(false);
     }
   };
-
   return (
     <AuthContext.Provider
       value={{
@@ -285,6 +262,5 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     </AuthContext.Provider>
   );
 };
-
 export const useAuth = () => useContext(AuthContext);
 export default AuthContext;

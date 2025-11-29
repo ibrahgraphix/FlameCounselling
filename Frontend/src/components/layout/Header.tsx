@@ -1,3 +1,4 @@
+// src/components/layout/Header.tsx
 // src/components/Header.tsx
 import React from "react";
 import { Link } from "react-router-dom";
@@ -15,21 +16,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useDetectDarkMode } from "@/components/ui/card";
-
 const Header: React.FC = () => {
   const { user, logout, isAdmin } = useAuth();
   const isDark = useDetectDarkMode();
-
   const gradient = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)";
   const bgColor = isDark
     ? "bg-gray-800 border-gray-600"
     : "bg-white border-gray-200";
   const textColor = isDark ? "text-gray-300" : "text-gray-700";
   const hoverColor = isDark ? "hover:text-teal-400" : "hover:text-[#1e3a8a]";
-
   // control sheet open state to programmatically close
   const [sheetOpen, setSheetOpen] = React.useState(false);
-
+  const userHomePath = isAdmin() ? "/admin" : "/appointments";
+  const userHomeLabel = isAdmin() ? "Dashboard" : "Appointments";
   return (
     <header
       className={`sticky top-0 z-50 border-b shadow-sm backdrop-blur-md ${bgColor}`}
@@ -37,7 +36,7 @@ const Header: React.FC = () => {
       <div className="container mx-auto flex items-center justify-between py-2 px-3 sm:px-6">
         {/* Logo */}
         <Link
-          to={user ? (isAdmin() ? "/admin" : "/dashboard") : "/"}
+          to={user ? userHomePath : "/"}
           className="flex items-center gap-2"
         >
           <img
@@ -46,7 +45,6 @@ const Header: React.FC = () => {
             className="h-10 sm:h-12 md:h-16 lg:h-20 w-auto object-contain"
           />
         </Link>
-
         {/* Desktop nav (hidden on small screens) */}
         <nav className="hidden md:flex items-center gap-4 lg:gap-6 text-sm">
           {!user ? (
@@ -87,12 +85,11 @@ const Header: React.FC = () => {
           ) : (
             <>
               <Link
-                to="/appointments"
+                to={userHomePath}
                 className={`px-2 py-1 ${hoverColor} transition-colors ${textColor}`}
               >
-                Appointments
+                {userHomeLabel}
               </Link>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -129,12 +126,11 @@ const Header: React.FC = () => {
             </>
           )}
         </nav>
-
         {/* Mobile menu trigger */}
         <div className="md:hidden flex items-center gap-2">
           {user ? (
             <Link
-              to="/appointments"
+              to={userHomePath}
               className="mr-2"
               onClick={() => setSheetOpen(false)}
             >
@@ -147,7 +143,6 @@ const Header: React.FC = () => {
               </Avatar>
             </Link>
           ) : null}
-
           <Sheet
             open={sheetOpen}
             onOpenChange={(val) => setSheetOpen(Boolean(val))}
@@ -162,14 +157,13 @@ const Header: React.FC = () => {
                 <Menu className={`h-6 w-6 ${textColor}`} />
               </Button>
             </SheetTrigger>
-
             <SheetContent
               side="right"
               className={`p-6 w-full max-w-xs min-h-screen flex flex-col ${bgColor}`}
             >
               <div className="flex items-center justify-between mb-6">
                 <Link
-                  to={user ? (isAdmin() ? "/admin" : "/dashboard") : "/"}
+                  to={user ? userHomePath : "/"}
                   className="flex items-center"
                   onClick={() => setSheetOpen(false)}
                 >
@@ -179,7 +173,6 @@ const Header: React.FC = () => {
                     className="h-12 w-auto"
                   />
                 </Link>
-
                 <Button
                   variant="ghost"
                   onClick={() => setSheetOpen(false)}
@@ -188,7 +181,6 @@ const Header: React.FC = () => {
                   Close
                 </Button>
               </div>
-
               <nav className="flex flex-col gap-3 text-base">
                 {!user ? (
                   <>
@@ -236,11 +228,11 @@ const Header: React.FC = () => {
                 ) : (
                   <>
                     <Link
-                      to="/appointments"
+                      to={userHomePath}
                       className="py-2 px-2 rounded-md hover:bg-gray-100"
                       onClick={() => setSheetOpen(false)}
                     >
-                      Appointments
+                      {userHomeLabel}
                     </Link>
                     <Link
                       to="/profile"
@@ -261,7 +253,6 @@ const Header: React.FC = () => {
                   </>
                 )}
               </nav>
-
               <div className="mt-auto text-xs text-muted-foreground">
                 <p>© Flame Counseling</p>
               </div>
@@ -272,5 +263,4 @@ const Header: React.FC = () => {
     </header>
   );
 };
-
 export default Header;
