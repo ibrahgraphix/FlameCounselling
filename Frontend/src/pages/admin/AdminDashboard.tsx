@@ -63,6 +63,34 @@ const AdminDashboard: React.FC = () => {
   const SECONDARY = "#3b82f6";
   const GRADIENT = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)";
 
+  // Color definitions
+  const colors = {
+    green: isDark ? "#34d399" : "#10b981",
+    blue: isDark ? "#60a5fa" : "#3b82f6",
+    violet: isDark ? "#a78bfa" : "#8b5cf6",
+    orange: isDark ? "#fbbf24" : "#f59e0b",
+  };
+
+  const greenHex = "#10b981";
+  const blueHex = "#3b82f6";
+  const violetHex = "#8b5cf6";
+  const orangeHex = "#f59e0b";
+
+  // Lighter variants for dark mode charts
+  const MOOD_COLORS = isDark
+    ? ["#34d399", "#6ee7b7", "#60a5fa", "#a78bfa", "#fbbf24"]
+    : ["#10b981", "#34d399", "#3b82f6", "#8b5cf6", "#f59e0b"];
+
+  const PIE_COLORS = isDark
+    ? ["#34d399", "#60a5fa", "#fbbf24"]
+    : ["#10b981", "#3b82f6", "#f59e0b"];
+
+  const progressClasses = {
+    completed: isDark ? "[&>div]:bg-green-400" : "[&>div]:bg-green-500",
+    upcoming: isDark ? "[&>div]:bg-blue-400" : "[&>div]:bg-blue-500",
+    cancelled: isDark ? "[&>div]:bg-orange-400" : "[&>div]:bg-orange-500",
+  };
+
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
@@ -127,14 +155,9 @@ const AdminDashboard: React.FC = () => {
       </div>
     );
 
-  // Chart palette: slightly different in dark mode for contrast
-  const CHART_COLORS = isDark
-    ? ["#93c5fd", "#60a5fa", "#3b82f6", "#60a5fa", "#93c5fd"]
-    : [PRIMARY, SECONDARY, "#60a5fa", "#93cfd", "#c7e0ff"];
-
   return (
     <div
-      className={`min-h-screen pt-16 pb-16 ${
+      className={`min-h-screen pt-16 pb-4 ${
         isDark ? "bg-gray-900" : "bg-white"
       }`}
     >
@@ -165,7 +188,7 @@ const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {/* === Bookings Today (replaces Total Users) === */}
           <Card
             className="rounded-3xl h-full"
@@ -175,14 +198,14 @@ const AdminDashboard: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p
-                    className="text-sm font-medium text-muted-foreground"
-                    style={{ color: isDark ? "#cbd5e1" : undefined }}
+                    className="text-sm font-medium"
+                    style={{ color: colors.green }}
                   >
                     Bookings Today
                   </p>
                   <div
                     className="text-2xl font-bold mt-1"
-                    style={{ color: isDark ? "#e6eefc" : undefined }}
+                    style={{ color: colors.green }}
                   >
                     {analytics.bookingsToday ?? 0}
                   </div>
@@ -191,9 +214,9 @@ const AdminDashboard: React.FC = () => {
                   className="rounded-md p-2"
                   style={{
                     background: isDark
-                      ? "rgba(30,58,138,0.12)"
-                      : "rgba(30,58,138,0.08)",
-                    color: PRIMARY,
+                      ? "rgba(16, 185, 129, 0.12)"
+                      : "rgba(16, 185, 129, 0.08)",
+                    color: colors.green,
                   }}
                 >
                   <CalendarIcon className="h-5 w-5" />
@@ -210,14 +233,14 @@ const AdminDashboard: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p
-                    className="text-sm font-medium text-muted-foreground"
-                    style={{ color: isDark ? "#cbd5e1" : undefined }}
+                    className="text-sm font-medium"
+                    style={{ color: colors.blue }}
                   >
                     Active Sessions
                   </p>
                   <div
                     className="text-2xl font-bold mt-1"
-                    style={{ color: isDark ? "#e6eefc" : undefined }}
+                    style={{ color: colors.blue }}
                   >
                     {analytics.appointments.upcoming}
                   </div>
@@ -226,9 +249,9 @@ const AdminDashboard: React.FC = () => {
                   className="rounded-md p-2"
                   style={{
                     background: isDark
-                      ? "rgba(59,130,246,0.12)"
-                      : "rgba(59,130,246,0.08)",
-                    color: SECONDARY,
+                      ? "rgba(59, 130, 246, 0.12)"
+                      : "rgba(59, 130, 246, 0.08)",
+                    color: colors.blue,
                   }}
                 >
                   <CalendarIcon className="h-5 w-5" />
@@ -245,14 +268,14 @@ const AdminDashboard: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p
-                    className="text-sm font-medium text-muted-foreground"
-                    style={{ color: isDark ? "#cbd5e1" : undefined }}
+                    className="text-sm font-medium"
+                    style={{ color: colors.violet }}
                   >
                     Session Notes
                   </p>
                   <div
                     className="text-2xl font-bold mt-1"
-                    style={{ color: isDark ? "#e6eefc" : undefined }}
+                    style={{ color: colors.violet }}
                   >
                     {analytics.blogPosts}
                   </div>
@@ -261,9 +284,9 @@ const AdminDashboard: React.FC = () => {
                   className="rounded-md p-2"
                   style={{
                     background: isDark
-                      ? "linear-gradient(135deg, rgba(30,58,138,0.12), rgba(59,130,246,0.06))"
-                      : "linear-gradient(135deg, rgba(30,58,138,0.06), rgba(59,130,246,0.04))",
-                    color: PRIMARY,
+                      ? "rgba(139, 92, 246, 0.12)"
+                      : "rgba(139, 92, 246, 0.08)",
+                    color: colors.violet,
                   }}
                 >
                   <BookOpen className="h-5 w-5" />
@@ -280,14 +303,14 @@ const AdminDashboard: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p
-                    className="text-sm font-medium text-muted-foreground"
-                    style={{ color: isDark ? "#cbd5e1" : undefined }}
+                    className="text-sm font-medium"
+                    style={{ color: colors.orange }}
                   >
                     Total Bookings
                   </p>
                   <div
                     className="text-2xl font-bold mt-1"
-                    style={{ color: isDark ? "#e6eefc" : undefined }}
+                    style={{ color: colors.orange }}
                   >
                     {analytics.communityPosts}
                   </div>
@@ -296,9 +319,9 @@ const AdminDashboard: React.FC = () => {
                   className="rounded-md p-2"
                   style={{
                     background: isDark
-                      ? "rgba(59,130,246,0.08)"
-                      : "rgba(59,130,246,0.06)",
-                    color: SECONDARY,
+                      ? "rgba(245, 158, 11, 0.12)"
+                      : "rgba(245, 158, 11, 0.08)",
+                    color: colors.orange,
                   }}
                 >
                   <MessageSquare className="h-5 w-5" />
@@ -308,7 +331,7 @@ const AdminDashboard: React.FC = () => {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Mood Distribution Chart */}
           <Card className="rounded-3xl" style={{ borderRadius: "1.25rem" }}>
             <CardHeader>
@@ -322,11 +345,11 @@ const AdminDashboard: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[340px]">
+              <div className="h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={analytics.moodDistribution}
-                    margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                    margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
                   >
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -348,31 +371,31 @@ const AdminDashboard: React.FC = () => {
                     <Bar
                       dataKey="excellent"
                       stackId="a"
-                      fill={CHART_COLORS[0]}
+                      fill={MOOD_COLORS[0]}
                       name="Excellent"
                     />
                     <Bar
                       dataKey="good"
                       stackId="a"
-                      fill={CHART_COLORS[1]}
+                      fill={MOOD_COLORS[1]}
                       name="Good"
                     />
                     <Bar
                       dataKey="neutral"
                       stackId="a"
-                      fill={CHART_COLORS[2]}
+                      fill={MOOD_COLORS[2]}
                       name="Neutral"
                     />
                     <Bar
                       dataKey="poor"
                       stackId="a"
-                      fill={CHART_COLORS[3]}
+                      fill={MOOD_COLORS[3]}
                       name="Poor"
                     />
                     <Bar
                       dataKey="bad"
                       stackId="a"
-                      fill={CHART_COLORS[4]}
+                      fill={MOOD_COLORS[4]}
                       name="Bad"
                     />
                   </BarChart>
@@ -394,7 +417,7 @@ const AdminDashboard: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px] mb-6">
+              <div className="h-[200px] mb-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -425,7 +448,7 @@ const AdminDashboard: React.FC = () => {
                       {[0, 1, 2].map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={CHART_COLORS[index % CHART_COLORS.length]}
+                          fill={PIE_COLORS[index % PIE_COLORS.length]}
                         />
                       ))}
                     </Pie>
@@ -434,7 +457,7 @@ const AdminDashboard: React.FC = () => {
                 </ResponsiveContainer>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {["completed", "upcoming", "cancelled"].map((key) => {
                   const val = analytics.appointments[
                     key as keyof typeof analytics.appointments
@@ -455,7 +478,9 @@ const AdminDashboard: React.FC = () => {
                       </div>
                       <Progress
                         value={pct}
-                        className="h-2 rounded-full"
+                        className={`h-2 rounded-full ${
+                          progressClasses[key as keyof typeof progressClasses]
+                        }`}
                         style={{
                           backgroundColor: isDark
                             ? "rgba(255,255,255,0.04)"
