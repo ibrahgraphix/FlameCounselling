@@ -1,4 +1,4 @@
-// src/controllers/adminAnalyticsController.ts
+// src/controllers/adminanalytics.ts
 import { Request, Response } from "express";
 import * as service from "../services/adminAnalytics";
 
@@ -15,8 +15,24 @@ export const getAnalytics = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, error: "Forbidden" });
     }
 
-    const analytics = await service.fetchSystemAnalytics();
-    return res.json({ success: true, analytics });
+    const user = (req as any).user || {};
+    const role = String(user.role ?? "").toLowerCase();
+
+    // If counselor, scope to their id. If admin, no scoping (system-wide).
+    if (role === "counselor") {
+      const counselorId = user.id ?? user.counselor_id ?? user.userId;
+      if (!counselorId) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Counselor id not found in token" });
+      }
+      const analytics = await service.fetchSystemAnalytics({ counselorId });
+      return res.json({ success: true, analytics });
+    } else {
+      // Admin: return full analytics
+      const analytics = await service.fetchSystemAnalytics();
+      return res.json({ success: true, analytics });
+    }
   } catch (err: any) {
     console.error("admin.getAnalytics error:", err);
     return res
