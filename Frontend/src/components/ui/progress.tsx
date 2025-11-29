@@ -7,8 +7,10 @@ const gradient = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)";
 
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
->(({ className, value, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & {
+    indicatorColor?: string;
+  }
+>(({ className, value, indicatorColor, ...props }, ref) => {
   const isDark = useDetectDarkMode();
   return (
     <ProgressPrimitive.Root
@@ -24,7 +26,7 @@ const Progress = React.forwardRef<
         className="h-full flex-1 transition-all"
         style={{
           transform: `translateX(-${100 - (value || 0)}%)`,
-          background: gradient,
+          background: indicatorColor || gradient,
         }}
       />
     </ProgressPrimitive.Root>

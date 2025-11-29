@@ -85,12 +85,6 @@ const AdminDashboard: React.FC = () => {
     ? ["#34d399", "#60a5fa", "#fbbf24"]
     : ["#10b981", "#3b82f6", "#f59e0b"];
 
-  const progressClasses = {
-    completed: isDark ? "[&>div]:bg-green-400" : "[&>div]:bg-green-500",
-    upcoming: isDark ? "[&>div]:bg-blue-400" : "[&>div]:bg-blue-500",
-    cancelled: isDark ? "[&>div]:bg-orange-400" : "[&>div]:bg-orange-500",
-  };
-
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
@@ -458,13 +452,14 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                {["completed", "upcoming", "cancelled"].map((key) => {
+                {["completed", "upcoming", "cancelled"].map((key, index) => {
                   const val = analytics.appointments[
                     key as keyof typeof analytics.appointments
                   ] as number;
                   const pct = analytics.appointments.total
                     ? (val / analytics.appointments.total) * 100
                     : 0;
+                  const progressColor = PIE_COLORS[index];
                   return (
                     <div key={key} className="space-y-1">
                       <div
@@ -478,9 +473,7 @@ const AdminDashboard: React.FC = () => {
                       </div>
                       <Progress
                         value={pct}
-                        className={`h-2 rounded-full ${
-                          progressClasses[key as keyof typeof progressClasses]
-                        }`}
+                        indicatorColor={progressColor}
                         style={{
                           backgroundColor: isDark
                             ? "rgba(255,255,255,0.04)"
