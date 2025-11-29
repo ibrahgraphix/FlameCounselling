@@ -134,7 +134,7 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div
-      className={`min-h-screen pt-6 pb-16 ${
+      className={`min-h-screen pt-16 pb-16 ${
         isDark ? "bg-gray-900" : "bg-white"
       }`}
     >
@@ -160,8 +160,7 @@ const AdminDashboard: React.FC = () => {
             className="text-muted-foreground"
             style={{ color: isDark ? "#cbd5e1" : undefined }}
           >
-            Monitor system performance, user activity, and manage platform
-            content.
+            Monitor bookings and active sessions for students
           </p>
         </div>
 

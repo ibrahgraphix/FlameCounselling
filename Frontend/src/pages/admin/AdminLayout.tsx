@@ -76,6 +76,9 @@ const AdminLayout: React.FC = () => {
     ? "bg-gray-700 text-white"
     : "bg-white text-blue-800";
   const iconColor = isDark ? "text-gray-300" : "text-white";
+  const panelBg = isDark
+    ? "bg-gray-800"
+    : "bg-gradient-to-r from-blue-900 to-blue-500";
 
   return (
     <div className={`min-h-screen flex flex-col md:flex-row ${bgColor}`}>
@@ -105,10 +108,29 @@ const AdminLayout: React.FC = () => {
               <Button variant="ghost" onClick={() => setCollapsed((c) => !c)}>
                 <Menu />
               </Button>
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={user?.avatar ?? ""} alt={user?.name ?? ""} />
-                <AvatarFallback>{user?.name?.charAt(0) ?? "A"}</AvatarFallback>
-              </Avatar>
+              <div className="flex items-center gap-1">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage
+                    src={user?.avatar ?? ""}
+                    alt={user?.name ?? ""}
+                  />
+                  <AvatarFallback>
+                    {user?.name?.charAt(0) ?? "A"}
+                  </AvatarFallback>
+                </Avatar>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-9 w-9 p-0 ${
+                    isDark
+                      ? "text-gray-400 hover:bg-gray-700"
+                      : "text-white hover:bg-blue-600"
+                  }`}
+                  onClick={logout}
+                >
+                  <LogOut className={`h-4 w-4 ${iconColor}`} />
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -127,45 +149,6 @@ const AdminLayout: React.FC = () => {
             </div>
           )}
 
-          {/* User Info */}
-          <div className={`p-3 md:p-4 border-b ${borderColor}`}>
-            <div
-              className={`flex items-center ${
-                collapsed ? "justify-center" : ""
-              }`}
-            >
-              <Avatar
-                className={`h-10 w-10 mr-3 ${isDark ? "bg-gray-700" : ""}`}
-              >
-                <AvatarImage src={user?.avatar ?? ""} alt={user?.name ?? ""} />
-                <AvatarFallback
-                  className={isDark ? "text-gray-300" : "text-white"}
-                >
-                  {user?.name?.charAt(0) || "A"}
-                </AvatarFallback>
-              </Avatar>
-
-              {!collapsed && (
-                <div className="flex-1 overflow-hidden">
-                  <p
-                    className={`font-medium ${
-                      isDark ? "text-gray-300" : "text-white"
-                    }`}
-                  >
-                    {user?.name}
-                  </p>
-                  <p
-                    className={`text-xs ${
-                      isDark ? "text-gray-400" : "text-blue-100"
-                    }`}
-                  >
-                    {roleLabel}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Navigation */}
           <nav className="flex-1 p-2 md:p-4 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
@@ -176,12 +159,14 @@ const AdminLayout: React.FC = () => {
                   key={item.name}
                   to={item.href}
                   title={item.name}
-                  className={`flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-colors ${
+                  className={`flex items-center justify-center px-2 py-2 text-sm font-medium rounded-md group transition-colors ${
                     isActive ? navActive : navInactive
-                  } ${collapsed ? "justify-center" : ""}`}
+                  }`}
                 >
                   <Icon
-                    className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                    className={`${
+                      collapsed ? "" : "mr-3"
+                    } h-5 w-5 flex-shrink-0 ${
                       isActive
                         ? isDark
                           ? "text-white"
@@ -194,26 +179,6 @@ const AdminLayout: React.FC = () => {
               );
             })}
           </nav>
-
-          {/* Footer */}
-          <div className={`p-3 md:p-4 mt-auto border-t ${borderColor}`}>
-            <div className="flex flex-col items-center md:items-stretch">
-              <Button
-                variant="ghost"
-                className={`justify-start hover:bg-blue-700 w-full ${
-                  isDark ? "text-gray-400 hover:text-gray-300" : "text-white"
-                } ${collapsed ? "justify-center" : ""}`}
-                onClick={logout}
-              >
-                <LogOut
-                  className={`mr-2 h-4 w-4 ${
-                    isDark ? "text-gray-400" : "text-white"
-                  }`}
-                />
-                {!collapsed && "Logout"}
-              </Button>
-            </div>
-          </div>
         </div>
       </aside>
 
@@ -223,6 +188,51 @@ const AdminLayout: React.FC = () => {
           isDark ? "bg-gray-900" : "bg-white"
         } transition-all duration-200`}
       >
+        {/* User Panel (desktop) */}
+        <div className="hidden md:block fixed top-4 right-4 z-50">
+          <div
+            className={`flex items-center gap-3 p-3 rounded-xl border ${panelBg} ${borderColor}`}
+          >
+            <Avatar className={`h-10 w-10 ${isDark ? "bg-gray-700" : ""}`}>
+              <AvatarImage src={user?.avatar ?? ""} alt={user?.name ?? ""} />
+              <AvatarFallback
+                className={isDark ? "text-gray-300" : "text-white"}
+              >
+                {user?.name?.charAt(0) || "A"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p
+                className={`font-medium truncate ${
+                  isDark ? "text-gray-300" : "text-white"
+                }`}
+              >
+                {user?.name}
+              </p>
+              <p
+                className={`text-xs truncate ${
+                  isDark ? "text-gray-400" : "text-blue-100"
+                }`}
+              >
+                {roleLabel}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`${
+                isDark
+                  ? "text-gray-400 hover:bg-gray-700 hover:text-gray-300"
+                  : "text-white hover:bg-blue-600"
+              }`}
+              onClick={logout}
+            >
+              <LogOut
+                className={`h-4 w-4 ${isDark ? "text-gray-400" : "text-white"}`}
+              />
+            </Button>
+          </div>
+        </div>
         <Outlet />
       </main>
     </div>
