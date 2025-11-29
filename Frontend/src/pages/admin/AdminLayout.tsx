@@ -159,9 +159,9 @@ const AdminLayout: React.FC = () => {
                   key={item.name}
                   to={item.href}
                   title={item.name}
-                  className={`flex items-center justify-center px-2 py-2 text-sm font-medium rounded-md group transition-colors ${
+                  className={`flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-colors ${
                     isActive ? navActive : navInactive
-                  }`}
+                  } ${collapsed ? "justify-center" : "justify-start"}`}
                 >
                   <Icon
                     className={`${
