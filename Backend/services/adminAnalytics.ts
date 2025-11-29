@@ -17,21 +17,14 @@ export const fetchSystemAnalytics = async (opts?: {
       ? String(opts!.counselorId)
       : undefined;
 
-  // Helper to build WHERE clause and params
-  const withCounselorWhere = (baseQuery: string) => {
-    if (!counselorId) return { query: baseQuery, params: [] as any[] };
-    // assume bookings, session_notes use counselor_id column
-    return {
-      query: `${baseQuery} WHERE counselor_id = $1`,
-      params: [Number(counselorId)] as any[],
-    };
-  };
-
   try {
     if (counselorId) {
-      // Counselor-scoped queries
+      // Counselor-scoped queries (ONLY use columns we are confident exist, e.g., counselor_id)
+      // Note: we intentionally DO NOT attempt to reference `counselors.id` because some schemas
+      // name the primary key differently (e.g., counselor_id). To avoid "column does not exist"
+      // errors we skip that query and treat counselorsCount as 1 (the counselor themself).
       const qStudentsCount = `SELECT COUNT(DISTINCT student_id)::int AS count FROM bookings WHERE counselor_id = $1`;
-      const qCounselorsCount = `SELECT COUNT(*)::int AS count FROM counselors WHERE id = $1 OR counselor_id = $1`;
+      // If your sessions table uses a different column name, adjust it accordingly.
       const qSessionNotesCount = `SELECT COUNT(*)::int AS count FROM session_notes WHERE counselor_id = $1`;
       const qBookingsCount = `SELECT COUNT(*)::int AS count FROM bookings WHERE counselor_id = $1`;
       const qBookingsToday = `SELECT COUNT(*)::int AS count FROM bookings WHERE counselor_id = $1 AND created_at::date = CURRENT_DATE`;
@@ -53,7 +46,7 @@ export const fetchSystemAnalytics = async (opts?: {
 
       const [
         studentsRes,
-        counselorsRes,
+        // counselorsRes, -- removed to avoid referencing a potential non-existent 'id' column
         notesRes,
         bookingsRes,
         bookingsTodayRes,
@@ -61,7 +54,7 @@ export const fetchSystemAnalytics = async (opts?: {
         activeUsersRes,
       ] = await Promise.all([
         pool.query(qStudentsCount, [Number(counselorId)]),
-        pool.query(qCounselorsCount, [Number(counselorId)]),
+        // pool.query(qCounselorsCount, [Number(counselorId)]), // intentionally omitted
         pool.query(qSessionNotesCount, [Number(counselorId)]),
         pool.query(qBookingsCount, [Number(counselorId)]),
         pool.query(qBookingsToday, [Number(counselorId)]),
@@ -70,8 +63,8 @@ export const fetchSystemAnalytics = async (opts?: {
       ]);
 
       const studentsCount = Number(studentsRes.rows[0]?.count ?? 0);
-      // If counselors table doesn't return count, fallback to 1 (self)
-      const counselorsCount = Number(counselorsRes.rows[0]?.count ?? 1);
+      // We omitted the counselors count query to avoid schema mismatch errors.
+      const counselorsCount = 1; // the counselor themself
       const sessionNotesCount = Number(notesRes.rows[0]?.count ?? 0);
       const bookingsCount = Number(bookingsRes.rows[0]?.count ?? 0);
       const bookingsToday = Number(bookingsTodayRes.rows[0]?.count ?? 0);
@@ -87,7 +80,7 @@ export const fetchSystemAnalytics = async (opts?: {
       const activeUsers = Number(activeUsersRes.rows[0]?.count ?? 0);
       const userCount = studentsCount + (counselorsCount || 1);
 
-      // Mood distribution - keep placeholder zeros (replace with your actual mood queries if you have a moods table)
+      // Mood distribution - placeholder zeros; add real queries if you have a moods table
       const moodDistribution = [
         { name: "Mon", excellent: 0, good: 0, neutral: 0, poor: 0, bad: 0 },
         { name: "Tue", excellent: 0, good: 0, neutral: 0, poor: 0, bad: 0 },
@@ -205,7 +198,11 @@ export const fetchSystemAnalytics = async (opts?: {
       };
     }
   } catch (err) {
-    console.error("adminAnalytics.fetchSystemAnalytics error:", err);
+    console.error(
+      "adminAnalytics.fetchSystemAnalytics error (counselorId=%s):",
+      counselorId,
+      err
+    );
     throw err;
   }
 };

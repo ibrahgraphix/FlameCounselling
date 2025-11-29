@@ -2,6 +2,10 @@
 import { Request, Response } from "express";
 import * as service from "../services/adminAnalytics";
 
+/**
+ * ensureAdminOrCounselor
+ * Validates that req.user exists and has role admin or counselor.
+ */
 const ensureAdminOrCounselor = (req: Request) => {
   const u = (req as any).user;
   if (!u) return false;
@@ -9,6 +13,15 @@ const ensureAdminOrCounselor = (req: Request) => {
   return role === "admin" || role === "counselor";
 };
 
+/**
+ * GET /api/admin/analytics
+ *
+ * Behavior:
+ * - If requester is admin -> return global analytics (system-wide).
+ * - If requester is counselor -> return analytics scoped to that counselor (uses req.user.id).
+ *
+ * Note: Frontend does NOT need to pass any query param. Authorization is enforced server-side.
+ */
 export const getAnalytics = async (req: Request, res: Response) => {
   try {
     if (!ensureAdminOrCounselor(req)) {
