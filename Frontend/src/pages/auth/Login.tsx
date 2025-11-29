@@ -58,9 +58,15 @@ const Login: React.FC = () => {
     try {
       const success = await login(email, password);
       if (success) {
-        const role = (user?.role ?? "").toString().toLowerCase();
-        if (role === "admin" || role === "counselor") {
-          navigate("/admin", { replace: true });
+        const stored = localStorage.getItem("mindease_user");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const role = (parsed.role ?? "").toString().toLowerCase();
+          if (role === "admin" || role === "counselor") {
+            navigate("/admin", { replace: true });
+          } else {
+            navigate("/appointments", { replace: true });
+          }
         } else {
           navigate("/appointments", { replace: true });
         }
