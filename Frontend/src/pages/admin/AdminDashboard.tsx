@@ -27,54 +27,144 @@ import {
   Calendar as CalendarIcon,
   BookOpen,
   MessageSquare,
-  Users,
+  MessageCircle,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
-const AdminDashboard: React.FC = () => {
-  interface AnalyticsData {
-    userCount: number;
-    activeUsers: number;
-    blogPosts: number;
-    communityPosts: number;
-    bookingsToday?: number;
-    moodDistribution: {
-      name: string;
-      excellent: number;
-      good: number;
-      neutral: number;
-      poor: number;
-      bad: number;
-    }[];
-    appointments: {
-      completed: number;
-      upcoming: number;
-      cancelled: number;
-      total: number;
-    };
-  }
+interface MoodBucket {
+  name: string;
+  excellent: number;
+  good: number;
+  neutral: number;
+  poor: number;
+  bad: number;
+}
 
+interface AppointmentsSummary {
+  completed: number;
+  upcoming: number;
+  cancelled: number;
+  total: number;
+}
+
+interface AnalyticsData {
+  userCount: number;
+  activeUsers: number;
+  blogPosts: number;
+  communityPosts: number;
+  bookingsToday?: number;
+  moodDistribution: MoodBucket[];
+  appointments: AppointmentsSummary;
+}
+
+function parseJwt(token?: string | null) {
+  if (!token) return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const payload = parts[1];
+    // add padding if needed
+    const pad = payload.length % 4;
+    const base64 =
+      payload.replace(/-/g, "+").replace(/_/g, "/") +
+      (pad ? "=".repeat(4 - pad) : "");
+    const json = atob(base64);
+    return JSON.parse(json);
+  } catch (e) {
+    // malformed token
+    return null;
+  }
+}
+
+function getStoredUser(): {
+  role?: string;
+  id?: string | number;
+  isAdmin?: boolean;
+} | null {
+  try {
+    const keys = ["currentUser", "user", "profile"];
+    for (const k of keys) {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        try {
+          const obj = JSON.parse(raw);
+          if (obj) {
+            return {
+              role:
+                (obj.role as string) ||
+                (obj.roles && obj.roles[0]) ||
+                undefined,
+              id: obj.id || obj.userId || obj.counselorId,
+              isAdmin: !!(obj.isAdmin || obj.admin),
+            };
+          }
+        } catch {
+          // ignore parse error
+        }
+      }
+    }
+
+    // Try parsing JWT from token key
+    const token =
+      localStorage.getItem("token") || localStorage.getItem("authToken");
+    const payload = parseJwt(token);
+    if (payload) {
+      return {
+        role: payload.role || payload.roles || payload.userRole,
+        id: payload.id || payload.userId || payload.sub,
+        isAdmin:
+          payload.role === "admin" ||
+          payload.isAdmin === true ||
+          payload.admin === true,
+      };
+    }
+  } catch (e) {
+    // ignore any localStorage errors
+  }
+  return null;
+}
+
+const AdminDashboard: React.FC = () => {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const isDark = useDetectDarkMode();
 
-  // Theme constants (visuals remain consistent; charts get lighter variant in dark mode)
+  // Theme constants
   const PRIMARY = "#1e3a8a";
   const SECONDARY = "#3b82f6";
   const GRADIENT = "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)";
 
   useEffect(() => {
     const fetchAnalytics = async () => {
+      setLoading(true);
+
+      // Determine user role & id from localStorage / token
+      const stored = getStoredUser();
+      const isAdmin =
+        stored?.isAdmin ||
+        (typeof stored?.role === "string" &&
+          ["admin", "administrator", "superadmin"].includes(
+            String(stored.role).toLowerCase()
+          ));
+
+      // If not admin and we have an id, treat user as counselor and request counselor-specific data
+      const counselorId =
+        !isAdmin && stored?.id !== undefined && stored?.id !== null
+          ? String(stored!.id)
+          : undefined;
+
       try {
-        setLoading(true);
-        const data = await getSystemAnalytics();
+        const params = counselorId ? { counselorId } : undefined;
+        const data = await (getSystemAnalytics as any)(params);
         setAnalytics(data);
       } catch (error) {
         console.error("Error fetching analytics data:", error);
+        setAnalytics(null);
       } finally {
         setLoading(false);
       }
     };
+
     fetchAnalytics();
   }, []);
 
@@ -127,7 +217,6 @@ const AdminDashboard: React.FC = () => {
       </div>
     );
 
-  // Chart palette: slightly different in dark mode for contrast
   const CHART_COLORS = isDark
     ? ["#93c5fd", "#60a5fa", "#3b82f6", "#60a5fa", "#93c5fd"]
     : [PRIMARY, SECONDARY, "#60a5fa", "#93cfd", "#c7e0ff"];
@@ -138,7 +227,6 @@ const AdminDashboard: React.FC = () => {
         isDark ? "bg-gray-900" : "bg-white"
       }`}
     >
-      {/* expose CSS vars for nested components */}
       <div
         style={
           {
@@ -167,7 +255,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* === Bookings Today (replaces Total Users) === */}
+          {/* Bookings Today */}
           <Card
             className="rounded-3xl h-full"
             style={{ borderRadius: "1.25rem" }}
@@ -203,6 +291,7 @@ const AdminDashboard: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* Active Sessions */}
           <Card
             className="rounded-3xl h-full"
             style={{ borderRadius: "1.25rem" }}
@@ -238,6 +327,7 @@ const AdminDashboard: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* Session Notes */}
           <Card
             className="rounded-3xl h-full"
             style={{ borderRadius: "1.25rem" }}
@@ -273,6 +363,7 @@ const AdminDashboard: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* Total Bookings */}
           <Card
             className="rounded-3xl h-full"
             style={{ borderRadius: "1.25rem" }}
@@ -438,7 +529,7 @@ const AdminDashboard: React.FC = () => {
               <div className="space-y-4">
                 {["completed", "upcoming", "cancelled"].map((key) => {
                   const val = analytics.appointments[
-                    key as keyof typeof analytics.appointments
+                    key as keyof AppointmentsSummary
                   ] as number;
                   const pct = analytics.appointments.total
                     ? (val / analytics.appointments.total) * 100
