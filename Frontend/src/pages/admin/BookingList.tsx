@@ -108,6 +108,23 @@ const BookingList: React.FC = () => {
   // session notes loaded from server for the current counselor
   const [sessionNotes, setSessionNotes] = useState<SessionNote[]>([]);
 
+  // Button color variants
+  const buttonVariants = {
+    confirm: darkMode
+      ? "border-green-400 text-green-400 hover:bg-green-900/20"
+      : "border-green-600 text-green-600 hover:bg-green-50",
+    reschedule: darkMode
+      ? "border-orange-400 text-orange-400 hover:bg-orange-900/20"
+      : "border-orange-600 text-orange-600 hover:bg-orange-50",
+    completed: darkMode
+      ? "border-blue-400 text-blue-400 hover:bg-blue-900/20"
+      : "border-blue-600 text-blue-600 hover:bg-blue-50",
+    notes: darkMode
+      ? "text-violet-400 hover:bg-violet-900/20"
+      : "text-violet-600 hover:bg-violet-50",
+    filled: darkMode ? "text-green-400" : "text-green-600",
+  };
+
   // --- Helpers to normalize booking student id/email ---
   const getStudentIdFromBooking = (b: BookingItem): number | null => {
     const candidate =
@@ -741,8 +758,8 @@ const BookingList: React.FC = () => {
         : "bg-yellow-100 text-yellow-700";
     if (s === "completed")
       return darkMode
-        ? "bg-indigo-900 text-indigo-300"
-        : "bg-indigo-100 text-indigo-700";
+        ? "bg-blue-900 text-blue-300"
+        : "bg-blue-100 text-blue-700";
     return darkMode ? "bg-red-900 text-red-300" : "bg-red-100 text-red-700";
   };
 
@@ -813,6 +830,7 @@ const BookingList: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
+              className={buttonVariants.confirm}
               onClick={() => handleAction(id as any, "confirm")}
               disabled={
                 actionLoadingId === id ||
@@ -828,6 +846,7 @@ const BookingList: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
+              className={buttonVariants.reschedule}
               onClick={() => openRescheduleUI(b)}
               disabled={
                 actionLoadingId === id ||
@@ -842,6 +861,7 @@ const BookingList: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
+              className={buttonVariants.completed}
               onClick={() => handleAction(id as any, "complete")}
               disabled={
                 actionLoadingId === id ||
@@ -857,13 +877,19 @@ const BookingList: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
+                className={buttonVariants.notes}
                 onClick={() => openNotesModalForBooking(b)}
                 disabled={isCompleted || actionLoadingId === id}
               >
                 Notes
               </Button>
             ) : (
-              <Button variant="ghost" size="sm" disabled>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={buttonVariants.filled}
+                disabled
+              >
                 Filled
               </Button>
             )}
@@ -1115,6 +1141,7 @@ const BookingList: React.FC = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            className={buttonVariants.confirm}
                             onClick={() => handleAction(id as any, "confirm")}
                             disabled={
                               actionLoadingId === id ||
@@ -1129,6 +1156,7 @@ const BookingList: React.FC = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            className={buttonVariants.reschedule}
                             onClick={() => {
                               openRescheduleUI(b);
                             }}
@@ -1144,6 +1172,7 @@ const BookingList: React.FC = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            className={buttonVariants.completed}
                             onClick={() => handleAction(id as any, "complete")}
                             disabled={
                               actionLoadingId === id ||
@@ -1159,6 +1188,7 @@ const BookingList: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="sm"
+                              className={buttonVariants.notes}
                               onClick={() => openNotesModalForBooking(b)}
                               title="Add session note"
                               disabled={isCompleted || actionLoadingId === id}
@@ -1166,7 +1196,12 @@ const BookingList: React.FC = () => {
                               Notes
                             </Button>
                           ) : (
-                            <Button variant="ghost" size="sm" disabled>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={buttonVariants.filled}
+                              disabled
+                            >
                               Filled
                             </Button>
                           )}
