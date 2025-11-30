@@ -1073,7 +1073,7 @@ const BookingList: React.FC = () => {
                   <TableHead className="text-center">Time</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   {!isAdminUser && (
-                    <TableHead className="text-center text-right">
+                    <TableHead className="text-center text-center">
                       Actions
                     </TableHead>
                   )}
