@@ -1073,9 +1073,7 @@ const BookingList: React.FC = () => {
                   <TableHead className="text-center">Time</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   {!isAdminUser && (
-                    <TableHead className="text-center text-center">
-                      Actions
-                    </TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -1109,26 +1107,30 @@ const BookingList: React.FC = () => {
                   return (
                     <TableRow key={String(id)}>
                       <TableCell
+                        className="text-center"
                         style={{ color: darkMode ? "#e6eefc" : undefined }}
                       >
                         {studentName}
                       </TableCell>
                       <TableCell
+                        className="text-center"
                         style={{ color: darkMode ? "#cbd5e1" : undefined }}
                       >
                         {year}
                       </TableCell>
                       <TableCell
+                        className="text-center"
                         style={{ color: darkMode ? "#cbd5e1" : undefined }}
                       >
                         {datePretty}
                       </TableCell>
                       <TableCell
+                        className="text-center"
                         style={{ color: darkMode ? "#cbd5e1" : undefined }}
                       >
                         {timeRaw}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${statusClass(
                             status
@@ -1139,7 +1141,7 @@ const BookingList: React.FC = () => {
                       </TableCell>
 
                       {!isAdminUser && (
-                        <TableCell className="text-right space-x-2">
+                        <TableCell className="text-center space-x-2">
                           <Button
                             variant="outline"
                             size="sm"

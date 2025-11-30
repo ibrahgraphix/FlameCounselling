@@ -334,15 +334,16 @@ export default function SessionNotes({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead className="text-center">Student</TableHead>
+                  <TableHead className="text-center">Date & Time</TableHead>
+                  <TableHead className="text-center">Notes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {notesList.map((note) => (
                   <TableRow key={note.note_id}>
                     <TableCell
+                      className="text-center"
                       style={{ color: isDark ? "#e6eefc" : undefined }}
                     >
                       {note.student_name ??
@@ -350,6 +351,7 @@ export default function SessionNotes({
                         String(note.student_id)}
                     </TableCell>
                     <TableCell
+                      className="text-center"
                       style={{ color: isDark ? "#cbd5e1" : undefined }}
                     >
                       {(() => {
@@ -367,6 +369,7 @@ export default function SessionNotes({
                       })()}
                     </TableCell>
                     <TableCell
+                      className="text-center"
                       style={{
                         whiteSpace: "pre-wrap",
                         color: isDark ? "#cbd5e1" : undefined,
