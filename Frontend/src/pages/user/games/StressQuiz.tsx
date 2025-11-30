@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useDetectDarkMode } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import api from "@/services/api"; // default axios instance
 
 // ======================
 // TYPES
@@ -75,6 +76,24 @@ const computeResult = (score: number) => {
   }
 };
 
+/**
+ * mapQuizScoreToMood
+ * - quiz score range: 6 .. 30 (higher = more stress)
+ * - mood scale: 1 .. 5 (1 = very poor, 5 = excellent)
+ * We map inversely: higher stress -> lower mood.
+ */
+const mapQuizScoreToMood = (score: number) => {
+  const min = 6;
+  const max = 30;
+  const range = max - min; // 24
+  const normalized = Math.max(0, Math.min(1, (score - min) / range)); // 0..1
+  // invert and map to 1..5
+  const inverted = 1 - normalized;
+  const moodFloat = inverted * 4 + 1; // 1..5
+  const mood = Math.round(moodFloat);
+  return Math.max(1, Math.min(5, mood));
+};
+
 // ======================
 // MAIN COMPONENT
 // ======================
@@ -119,11 +138,30 @@ const StressQuiz: React.FC = () => {
         score,
       };
 
-      await fetch("/api/games/participate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      // 1) Participation tracking (keeps your existing endpoint)
+      try {
+        await api.post("/api/games/participate", payload);
+      } catch (err) {
+        // don't block user flow on analytics failure
+        console.warn("games/participate failed:", err);
+      }
+
+      // 2) Derive a mood value and send a mood log so dashboards can aggregate
+      try {
+        const mood = mapQuizScoreToMood(score); // 1..5 (1 = very poor)
+        const moodPayload = {
+          user_id: user?.id ?? null,
+          date: new Date().toISOString().slice(0, 10), // yyyy-mm-dd
+          mood,
+          anxiety: null,
+          sleep: null,
+          notes: `From stress-quiz (score ${score})`,
+          source: "stress-quiz",
+        };
+        await api.post("/api/games/mood", moodPayload);
+      } catch (err) {
+        console.warn("games/mood POST failed:", err);
+      }
     } catch (err) {
       console.error("Tracking failed:", err);
     } finally {

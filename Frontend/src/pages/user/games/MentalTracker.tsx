@@ -1,4 +1,3 @@
-// src/pages/MentalTracker.tsx
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -15,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { getMoodEntries, saveMoodEntry } from "@/services/api";
+import api from "@/services/api"; // axios instance
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -119,14 +119,34 @@ const MentalTracker: React.FC = () => {
 
     const entry = {
       date: format(date, "yyyy-MM-dd"),
-      mood: mood,
-      anxiety: anxiety,
-      sleep: sleep,
+      mood: Number(mood),
+      anxiety: Number(anxiety),
+      sleep: Number(sleep),
       notes,
     };
 
     try {
+      // Save locally (existing behavior + fallback)
       await saveMoodEntry(user.id, entry);
+
+      // Attempt to send to backend so the admin weekly aggregation picks it up
+      try {
+        const payload = {
+          user_id: user.id ?? null,
+          date: entry.date,
+          mood: entry.mood,
+          anxiety: entry.anxiety,
+          sleep: entry.sleep,
+          notes: entry.notes ?? "",
+          source: "mental-tracker",
+        };
+        await api.post("/api/games/mood", payload);
+      } catch (err) {
+        // log but do not block UI — localStorage remains as fallback
+        console.warn("POST /api/games/mood failed:", err);
+      }
+
+      // Refresh local entries from whichever source (localStorage)
       const updatedEntries = await getMoodEntries(user.id);
       const normalized = (updatedEntries || []).map((e: any) => ({
         date: e.date,

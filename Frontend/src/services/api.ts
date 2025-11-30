@@ -382,6 +382,7 @@ export const getAllAppointments = async () => {
     const resp = await api.get("/api/bookings/admin");
     if (resp?.data?.success) return resp.data.bookings;
     if (Array.isArray(resp?.data)) return resp.data;
+    if (resp?.data?.bookings) return resp.data.bookings;
   } catch (err) {
     console.warn("getAllAppointments backend failed:", err);
   }
@@ -600,26 +601,158 @@ export const deleteUser = async (role: string, id: string | number) => {
 
 export const getSystemAnalytics = async () => {
   try {
-    const resp = await api.get("/api/admin/analytics");
-    if (resp?.data?.success) return resp.data.analytics;
-    if (resp?.data) return resp.data;
-  } catch (err) {}
-  await new Promise((r) => setTimeout(r, 250));
-  return {
-    userCount: 1240,
-    activeUsers: 312,
-    blogPosts: 142,
-    communityPosts: 980,
-    userGrowth: [
-      { month: "Jan", users: 40 },
-      { month: "Feb", users: 55 },
-      { month: "Mar", users: 65 },
-    ],
-    moodDistribution: [
-      { name: "Mon", excellent: 50, good: 80, neutral: 40, poor: 15, bad: 5 },
-    ],
-    appointments: { completed: 480, upcoming: 120, cancelled: 40, total: 640 },
-  };
+    // request both endpoints concurrently and be tolerant to one failing
+    const [adminResp, gamesResp] = await Promise.allSettled([
+      api.get("/api/admin/analytics"),
+      api.get("/api/games/admin-weekly-mood", { params: { days: 7 } }),
+    ]);
+
+    let analytics: any = null;
+
+    // prefer server response shape { success: true, analytics: {...} }
+    if (adminResp.status === "fulfilled") {
+      const d = adminResp.value?.data;
+      analytics = d?.analytics ?? d ?? null;
+    }
+
+    // if admin fetch failed, create an empty analytics object so we can merge mood data
+    if (!analytics) analytics = {};
+
+    // If games endpoint returned mood distribution, use it
+    if (gamesResp.status === "fulfilled") {
+      const gdata = gamesResp.value?.data;
+      if (gdata?.success && Array.isArray(gdata.data)) {
+        analytics.moodDistribution = gdata.data;
+      } else if (Array.isArray(gdata)) {
+        // in case the endpoint returns array directly
+        analytics.moodDistribution = gdata;
+      }
+    }
+
+    // If analytics still missing key fields, keep previous fallback behavior
+    const fallback = {
+      userCount: analytics.userCount ?? 1240,
+      activeUsers: analytics.activeUsers ?? 312,
+      blogPosts: analytics.blogPosts ?? 142,
+      communityPosts: analytics.communityPosts ?? 980,
+      userGrowth: analytics.userGrowth ?? [
+        { month: "Jan", users: 40 },
+        { month: "Feb", users: 55 },
+        { month: "Mar", users: 65 },
+      ],
+      moodDistribution: analytics.moodDistribution ??
+        analytics.moodDistribution ?? [
+          {
+            name: "Mon",
+            excellent: 50,
+            good: 80,
+            neutral: 40,
+            poor: 15,
+            bad: 5,
+          },
+          {
+            name: "Tue",
+            excellent: 30,
+            good: 60,
+            neutral: 50,
+            poor: 20,
+            bad: 8,
+          },
+          {
+            name: "Wed",
+            excellent: 20,
+            good: 50,
+            neutral: 45,
+            poor: 22,
+            bad: 6,
+          },
+          {
+            name: "Thu",
+            excellent: 40,
+            good: 70,
+            neutral: 35,
+            poor: 18,
+            bad: 4,
+          },
+          {
+            name: "Fri",
+            excellent: 55,
+            good: 85,
+            neutral: 50,
+            poor: 25,
+            bad: 6,
+          },
+          {
+            name: "Sat",
+            excellent: 60,
+            good: 90,
+            neutral: 55,
+            poor: 28,
+            bad: 9,
+          },
+          {
+            name: "Sun",
+            excellent: 45,
+            good: 75,
+            neutral: 48,
+            poor: 19,
+            bad: 5,
+          },
+        ],
+      appointments: analytics.appointments ?? {
+        completed: 480,
+        upcoming: 120,
+        cancelled: 40,
+        total: 640,
+      },
+      bookingsToday: analytics.bookingsToday ?? 0,
+    };
+
+    // merge real analytics fields where provided
+    const merged = {
+      userCount: analytics.userCount ?? fallback.userCount,
+      activeUsers: analytics.activeUsers ?? fallback.activeUsers,
+      blogPosts: analytics.blogPosts ?? fallback.blogPosts,
+      communityPosts: analytics.communityPosts ?? fallback.communityPosts,
+      userGrowth: analytics.userGrowth ?? fallback.userGrowth,
+      moodDistribution: analytics.moodDistribution ?? fallback.moodDistribution,
+      appointments: analytics.appointments ?? fallback.appointments,
+      bookingsToday: analytics.bookingsToday ?? fallback.bookingsToday,
+    };
+
+    return merged;
+  } catch (err) {
+    // Last-resort fallback (shouldn't be reached due to Promise.allSettled handling)
+    console.warn("getSystemAnalytics error:", err);
+    await new Promise((r) => setTimeout(r, 250));
+    return {
+      userCount: 1240,
+      activeUsers: 312,
+      blogPosts: 142,
+      communityPosts: 980,
+      userGrowth: [
+        { month: "Jan", users: 40 },
+        { month: "Feb", users: 55 },
+        { month: "Mar", users: 65 },
+      ],
+      moodDistribution: [
+        { name: "Mon", excellent: 50, good: 80, neutral: 40, poor: 15, bad: 5 },
+        { name: "Tue", excellent: 30, good: 60, neutral: 50, poor: 20, bad: 8 },
+        { name: "Wed", excellent: 20, good: 50, neutral: 45, poor: 22, bad: 6 },
+        { name: "Thu", excellent: 40, good: 70, neutral: 35, poor: 18, bad: 4 },
+        { name: "Fri", excellent: 55, good: 85, neutral: 50, poor: 25, bad: 6 },
+        { name: "Sat", excellent: 60, good: 90, neutral: 55, poor: 28, bad: 9 },
+        { name: "Sun", excellent: 45, good: 75, neutral: 48, poor: 19, bad: 5 },
+      ],
+      appointments: {
+        completed: 480,
+        upcoming: 120,
+        cancelled: 40,
+        total: 640,
+      },
+      bookingsToday: 0,
+    };
+  }
 };
 
 export default api;

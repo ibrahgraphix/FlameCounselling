@@ -20,6 +20,7 @@ let adminUsersRouter: any = null;
 let adminAnalyticsRouter: any = null;
 let googleCalendarRoutes: any = null;
 let studentProxy: any = null;
+let gamesRouter: any = null;
 
 function tryRequire(p: string) {
   try {
@@ -48,6 +49,7 @@ adminUsersRouter = tryRequire("./routes/adminUsers");
 adminAnalyticsRouter = tryRequire("./routes/adminAnalytics");
 googleCalendarRoutes = tryRequire("./routes/googleCalendarRoutes");
 studentProxy = tryRequire("./routes/studentProxy");
+gamesRouter = tryRequire("./routes/games");
 
 // allow cross-origin from your front-end with credentials
 const CLIENT_ORIGIN =
@@ -74,6 +76,7 @@ if (adminUsersRoutes) app.use("/api/admin/users", adminUsersRoutes);
 if (sessionNotesRoutes) app.use("/api/session-notes", sessionNotesRoutes);
 if (studentsRoutes) app.use("/api/students", studentsRoutes);
 if (adminAnalyticsRouter) app.use("/api/admin/analytics", adminAnalyticsRouter);
+if (gamesRouter) app.use("/api/games", gamesRouter);
 
 // Google calendar routes (mounted on two endpoints historically for compatibility)
 if (googleCalendarRoutes) {
