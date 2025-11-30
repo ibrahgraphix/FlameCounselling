@@ -1036,7 +1036,7 @@ const BookingList: React.FC = () => {
       )}
 
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-4">
           <CardTitle>{displayLabel}</CardTitle>
         </CardHeader>
 
@@ -1067,13 +1067,15 @@ const BookingList: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Full Name</TableHead>
-                  <TableHead>Year</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="text-center">Full Name</TableHead>
+                  <TableHead className="text-center">Year</TableHead>
+                  <TableHead className="text-center">Date</TableHead>
+                  <TableHead className="text-center">Time</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
                   {!isAdminUser && (
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-center text-right">
+                      Actions
+                    </TableHead>
                   )}
                 </TableRow>
               </TableHeader>
