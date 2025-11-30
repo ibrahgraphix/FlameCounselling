@@ -1141,7 +1141,7 @@ const BookingList: React.FC = () => {
                       </TableCell>
 
                       {!isAdminUser && (
-                        <TableCell className="space-x-2">
+                        <TableCell className="text-right space-x-2">
                           <Button
                             variant="outline"
                             size="sm"
