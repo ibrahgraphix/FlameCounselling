@@ -1,3 +1,4 @@
+// src/pages/MentalTracker.tsx
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -10,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { getMoodEntries, saveMoodEntry } from "@/services/api";
@@ -58,6 +58,18 @@ const getSleepLabel = (value: number) => {
   return labels[Math.max(0, Math.min(4, (value || 3) - 1))];
 };
 
+const GUEST_KEY = "mindease_guest_id";
+
+const ensureGuestId = (): string => {
+  if (typeof window === "undefined") return `guest_${Date.now()}`;
+  let id = localStorage.getItem(GUEST_KEY);
+  if (!id) {
+    id = `guest_${Date.now()}_${Math.floor(Math.random() * 90000 + 10000)}`;
+    localStorage.setItem(GUEST_KEY, id);
+  }
+  return id;
+};
+
 const MentalTracker: React.FC = () => {
   const { user } = useAuth();
   const [date, setDate] = useState<Date>(new Date());
@@ -73,7 +85,7 @@ const MentalTracker: React.FC = () => {
     anxiety: number;
     sleep: number;
     notes?: string;
-    timestamp?: string;
+    timestamp?: string | null;
   }
 
   const [entries, setEntries] = useState<MoodEntry[]>([]);
@@ -82,38 +94,44 @@ const MentalTracker: React.FC = () => {
     "entry"
   );
 
+  // derive owner id: prefer logged-in user id, otherwise persistent guest id
+  const ownerId = (user?.id ?? ensureGuestId()) as string | number;
+
   useEffect(() => {
+    let mounted = true;
     const fetchEntries = async () => {
       setLoading(true);
       try {
-        if (user) {
-          const fetchedEntries = await getMoodEntries(user.id);
-          const normalized = (fetchedEntries || []).map((e: any) => ({
-            date: e.date,
-            mood: Number(e.mood),
-            anxiety: Number(e.anxiety),
-            sleep: Number(e.sleep),
-            notes: e.notes ?? "",
-            timestamp: e.timestamp ?? null,
-          }));
-          setEntries(normalized);
-        }
+        // use ownerId (either user.id or guest id)
+        const fetchedEntries = await getMoodEntries(ownerId);
+        const normalized = (fetchedEntries || []).map((e: any) => ({
+          date: e.date,
+          mood: Number(e.mood),
+          anxiety: Number(e.anxiety),
+          sleep: Number(e.sleep),
+          notes: e.notes ?? "",
+          timestamp: e.timestamp ?? null,
+        }));
+        if (mounted) setEntries(normalized);
       } catch (error) {
         console.error("Error fetching mood entries:", error);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     fetchEntries();
+
+    return () => {
+      mounted = false;
+    };
+    // note: ownerId intentionally omitted from deps because ensureGuestId stores stable id in localStorage;
+    // we only want to refetch when user changes (login state) so include user in deps:
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      toast.error("You must be logged in to save entries");
-      return;
-    }
 
     setIsSubmitting(true);
 
@@ -123,16 +141,17 @@ const MentalTracker: React.FC = () => {
       anxiety: Number(anxiety),
       sleep: Number(sleep),
       notes,
+      timestamp: new Date().toISOString(),
     };
 
     try {
-      // Save locally (existing behavior + fallback)
-      await saveMoodEntry(user.id, entry);
+      // 1) Save locally (localStorage) — works for both guests and logged-in users
+      await saveMoodEntry(ownerId, entry);
 
-      // Attempt to send to backend so the admin weekly aggregation picks it up
+      // 2) Try sending to backend for admin analytics (non-blocking)
       try {
-        const payload = {
-          user_id: user.id ?? null,
+        const payload: any = {
+          user_id: user?.id ?? null,
           date: entry.date,
           mood: entry.mood,
           anxiety: entry.anxiety,
@@ -140,14 +159,21 @@ const MentalTracker: React.FC = () => {
           notes: entry.notes ?? "",
           source: "mental-tracker",
         };
+        // include guest_id so backend can choose to keep or ignore it
+        if (
+          typeof ownerId === "string" &&
+          String(ownerId).startsWith("guest_")
+        ) {
+          payload.guest_id = ownerId;
+        }
         await api.post("/api/games/mood", payload);
       } catch (err) {
-        // log but do not block UI — localStorage remains as fallback
+        // backend failure is non-fatal — local storage is the single source of truth for the UI
         console.warn("POST /api/games/mood failed:", err);
       }
 
-      // Refresh local entries from whichever source (localStorage)
-      const updatedEntries = await getMoodEntries(user.id);
+      // 3) Refresh entries from local storage (or backend when available)
+      const updatedEntries = await getMoodEntries(ownerId);
       const normalized = (updatedEntries || []).map((e: any) => ({
         date: e.date,
         mood: Number(e.mood),
@@ -157,6 +183,7 @@ const MentalTracker: React.FC = () => {
         timestamp: e.timestamp ?? null,
       }));
       setEntries(normalized);
+
       toast.success("Your mood has been recorded");
 
       // Reset form
