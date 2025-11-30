@@ -27,7 +27,6 @@ import {
   Calendar as CalendarIcon,
   BookOpen,
   MessageSquare,
-  Users,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -70,11 +69,6 @@ const AdminDashboard: React.FC = () => {
     violet: isDark ? "#a78bfa" : "#8b5cf6",
     orange: isDark ? "#fbbf24" : "#f59e0b",
   };
-
-  const greenHex = "#10b981";
-  const blueHex = "#3b82f6";
-  const violetHex = "#8b5cf6";
-  const orangeHex = "#f59e0b";
 
   // Lighter variants for dark mode charts
   const MOOD_COLORS = isDark
@@ -155,7 +149,8 @@ const AdminDashboard: React.FC = () => {
         isDark ? "bg-gray-900" : "bg-white"
       }`}
     >
-      {/* expose CSS vars for nested components */}
+      {/* expose CSS vars for nested components
+          NOTE: increased container width (max-w-full) and horizontal padding so cards use more horizontal space */}
       <div
         style={
           {
@@ -164,7 +159,9 @@ const AdminDashboard: React.FC = () => {
             "--m-theme-grad": GRADIENT,
           } as React.CSSProperties
         }
-        className={`mindease-container ${isDark ? "text-gray-300" : ""}`}
+        className={`mindease-container mx-auto max-w-full px-6 ${
+          isDark ? "text-gray-300" : ""
+        }`}
       >
         <div className="mb-8">
           <h1
@@ -185,7 +182,7 @@ const AdminDashboard: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {/* === Bookings Today (replaces Total Users) === */}
           <Card
-            className="rounded-3xl h-full"
+            className="rounded-3xl h-full w-full"
             style={{ borderRadius: "1.25rem" }}
           >
             <CardContent className="pt-6">
@@ -220,7 +217,7 @@ const AdminDashboard: React.FC = () => {
           </Card>
 
           <Card
-            className="rounded-3xl h-full"
+            className="rounded-3xl h-full w-full"
             style={{ borderRadius: "1.25rem" }}
           >
             <CardContent className="pt-6">
@@ -255,7 +252,7 @@ const AdminDashboard: React.FC = () => {
           </Card>
 
           <Card
-            className="rounded-3xl h-full"
+            className="rounded-3xl h-full w-full"
             style={{ borderRadius: "1.25rem" }}
           >
             <CardContent className="pt-6">
@@ -290,7 +287,7 @@ const AdminDashboard: React.FC = () => {
           </Card>
 
           <Card
-            className="rounded-3xl h-full"
+            className="rounded-3xl h-full w-full"
             style={{ borderRadius: "1.25rem" }}
           >
             <CardContent className="pt-6">
@@ -327,7 +324,10 @@ const AdminDashboard: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Mood Distribution Chart */}
-          <Card className="rounded-3xl" style={{ borderRadius: "1.25rem" }}>
+          <Card
+            className="rounded-3xl w-full"
+            style={{ borderRadius: "1.25rem" }}
+          >
             <CardHeader>
               <CardTitle style={{ color: isDark ? "#e6eefc" : undefined }}>
                 Weekly Mood Distribution
@@ -339,7 +339,8 @@ const AdminDashboard: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[200px]">
+              {/* reduced height to prevent excessive scrolling */}
+              <div className="h-[160px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={analytics.moodDistribution}
@@ -354,7 +355,12 @@ const AdminDashboard: React.FC = () => {
                       dataKey="name"
                       stroke={isDark ? "#cbd5e1" : "#374151"}
                     />
-                    <YAxis stroke={isDark ? "#cbd5e1" : "#374151"} />
+                    {/* disallow decimals and format ticks as whole numbers */}
+                    <YAxis
+                      stroke={isDark ? "#cbd5e1" : "#374151"}
+                      allowDecimals={false}
+                      tickFormatter={(v) => `${Math.round(Number(v))}`}
+                    />
                     <Tooltip
                       wrapperStyle={{
                         borderRadius: 8,
@@ -399,7 +405,10 @@ const AdminDashboard: React.FC = () => {
           </Card>
 
           {/* Appointment Stats */}
-          <Card className="rounded-3xl" style={{ borderRadius: "1.25rem" }}>
+          <Card
+            className="rounded-3xl w-full"
+            style={{ borderRadius: "1.25rem" }}
+          >
             <CardHeader>
               <CardTitle style={{ color: isDark ? "#e6eefc" : undefined }}>
                 Appointment Statistics
@@ -411,7 +420,8 @@ const AdminDashboard: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[150px] mb-4">
+              {/* reduced height for the pie area so the whole card is shorter */}
+              <div className="h-[140px] mb-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
