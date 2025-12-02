@@ -70,6 +70,55 @@ const ensureGuestId = (): string => {
   return id;
 };
 
+/* ---------- small numeric helpers ---------- */
+const avg = (arr: number[]) =>
+  arr.length > 0 ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
+
+const round1 = (v: number) => Math.round(v * 10) / 10;
+
+/**
+ * Pearson correlation (returns null if not enough data)
+ */
+const pearsonCorrelation = (a: number[], b: number[]) => {
+  if (a.length < 2 || b.length < 2 || a.length !== b.length) return null;
+  const n = a.length;
+  const meanA = avg(a);
+  const meanB = avg(b);
+  let num = 0;
+  let denA = 0;
+  let denB = 0;
+  for (let i = 0; i < n; i++) {
+    const da = a[i] - meanA;
+    const db = b[i] - meanB;
+    num += da * db;
+    denA += da * da;
+    denB += db * db;
+  }
+  const denom = Math.sqrt(denA * denB);
+  if (denom === 0) return null;
+  return num / denom;
+};
+
+/**
+ * Trend slope via simple linear regression (returns slope)
+ * x will be 0..n-1, y = mood values
+ */
+const linearSlope = (y: number[]) => {
+  const n = y.length;
+  if (n < 2) return 0;
+  const xMean = (n - 1) / 2;
+  const yMean = avg(y);
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < n; i++) {
+    const xi = i;
+    num += (xi - xMean) * (y[i] - yMean);
+    den += (xi - xMean) * (xi - xMean);
+  }
+  if (den === 0) return 0;
+  return num / den;
+};
+
 const MentalTracker: React.FC = () => {
   const { user } = useAuth();
   const [date, setDate] = useState<Date>(new Date());
@@ -232,6 +281,137 @@ const MentalTracker: React.FC = () => {
   const chartData =
     processedEntries.length > 0 ? processedEntries : mockEntries;
 
+  /* ---------- Derived analytics for insights ---------- */
+  // compute averages from entries (use all entries, not just last 14)
+  const avgMood =
+    entries.length > 0 ? avg(entries.map((e) => Number(e.mood))) : 0;
+  const avgAnxiety =
+    entries.length > 0 ? avg(entries.map((e) => Number(e.anxiety))) : 0;
+  const avgSleep =
+    entries.length > 0 ? avg(entries.map((e) => Number(e.sleep))) : 0;
+
+  // trend detection: slope of mood over processedEntries (last 14)
+  const moodValuesForTrend = (
+    processedEntries.length > 0 ? processedEntries : mockEntries
+  ).map((d) => Number(d.mood));
+  const slope = linearSlope(moodValuesForTrend);
+
+  let trendLabel = "stable";
+  let trendMessage =
+    "Your mood appears relatively stable over the tracked period.";
+  // thresholds chosen empirically; slope > ~0.05 per index considered improving
+  if (slope > 0.05) {
+    trendLabel = "improving";
+    trendMessage =
+      "Overall your mood has been improving over the tracked period. Keep doing the things that help.";
+  } else if (slope < -0.05) {
+    trendLabel = "declining";
+    trendMessage =
+      "Your mood shows a slight decline recently. Consider checking in with self-care routines or a counsellor.";
+  }
+
+  // pattern detection: correlation between today's sleep and next-day mood
+  // build arrays sleep[i] and mood[i+1]
+  let sleepToNextMoodCorr: number | null = null;
+  try {
+    const sorted = [...entries].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    const sleepArr: number[] = [];
+    const nextMoodArr: number[] = [];
+    for (let i = 0; i < sorted.length - 1; i++) {
+      sleepArr.push(Number(sorted[i].sleep));
+      nextMoodArr.push(Number(sorted[i + 1].mood));
+    }
+    sleepToNextMoodCorr =
+      sleepArr.length > 0 ? pearsonCorrelation(sleepArr, nextMoodArr) : null;
+  } catch (e) {
+    sleepToNextMoodCorr = null;
+  }
+
+  let patternMessage = "No clear pattern detected.";
+  if (sleepToNextMoodCorr !== null) {
+    const r = sleepToNextMoodCorr;
+    if (r >= 0.5) {
+      patternMessage =
+        "There is a fairly strong positive relationship between your sleep quality and next-day mood.";
+    } else if (r >= 0.25) {
+      patternMessage =
+        "There appears to be a modest positive relationship between sleep and next-day mood.";
+    } else if (r <= -0.5) {
+      patternMessage =
+        "There is a fairly strong negative relationship between sleep and next-day mood (unexpected).";
+    } else if (r <= -0.25) {
+      patternMessage =
+        "There is a modest negative relationship between sleep and next-day mood.";
+    } else {
+      patternMessage = "No clear relationship between sleep and next-day mood.";
+    }
+  }
+
+  // suggestions derived from averages
+  const suggestions: string[] = [];
+  if (avgSleep > 0 && avgSleep < 3) {
+    suggestions.push(
+      "Focus on improving sleep (consistent schedule, reduce screens before bed)."
+    );
+  }
+  if (avgAnxiety > 3.5) {
+    suggestions.push(
+      "Your average anxiety is comparatively high — try brief breathing or grounding exercises and consider speaking with a counsellor if it persists."
+    );
+  }
+  if (avgMood > 0 && avgMood < 3.2) {
+    suggestions.push(
+      "Mood appears low on average — consider regular small activities that lift mood (walks, social time, sunlight)."
+    );
+  }
+  if (suggestions.length === 0) {
+    suggestions.push(
+      "Keep up the healthy habits. Continue tracking and review changes over time."
+    );
+  }
+
+  /* ---------- Weekly distribution (per-owner) ---------- */
+  // Build weekday averages using entries (Mon..Sun)
+  const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weekdayBuckets: { sum: number; count: number }[] = Array(7)
+    .fill(0)
+    .map(() => ({ sum: 0, count: 0 }));
+
+  for (const e of entries) {
+    try {
+      const d = new Date(e.date + "T00:00:00");
+      if (!isNaN(d.getTime())) {
+        const wd = d.getDay(); // 0 Sun - 6 Sat
+        weekdayBuckets[wd].sum += Number(e.mood);
+        weekdayBuckets[wd].count += 1;
+      }
+    } catch (e) {}
+  }
+
+  const weeklyDistribution =
+    entries.length > 0
+      ? // map to Mon..Sun order (UI earlier used Mon first; keep Mon..Sun)
+        ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => {
+          const idx = weekdayNames.indexOf(label);
+          const bucket = weekdayBuckets[idx];
+          return {
+            day: label,
+            mood: bucket.count > 0 ? round1(bucket.sum / bucket.count) : 0, // show 0 if no data for that day
+          };
+        })
+      : // fallback to mock (if no entries)
+        [
+          { day: "Mon", mood: 3.5 },
+          { day: "Tue", mood: 3.2 },
+          { day: "Wed", mood: 3.8 },
+          { day: "Thu", mood: 4.1 },
+          { day: "Fri", mood: 4.5 },
+          { day: "Sat", mood: 4.2 },
+          { day: "Sun", mood: 3.7 },
+        ];
+
   return (
     <div className="min-h-screen pt-6 pb-16 bg-white">
       <div className="mindease-container">
@@ -245,10 +425,10 @@ const MentalTracker: React.FC = () => {
           </p>
         </div>
 
-        <div className="mb-6 flex space-x-4 border-b">
+        <div className="mb-6 flex space-x-4 border-b overflow-auto">
           <button
             className={cn(
-              "pb-2 font-medium",
+              "pb-2 font-medium whitespace-nowrap",
               activeTab === "entry"
                 ? `border-b-2 text-[${PRIMARY}] border-[${PRIMARY}]`
                 : "text-gray-500"
@@ -264,7 +444,7 @@ const MentalTracker: React.FC = () => {
           </button>
           <button
             className={cn(
-              "pb-2 font-medium",
+              "pb-2 font-medium whitespace-nowrap",
               activeTab === "insights"
                 ? `border-b-2 text-[${PRIMARY}] border-[${PRIMARY}]`
                 : "text-gray-500"
@@ -280,7 +460,7 @@ const MentalTracker: React.FC = () => {
           </button>
           <button
             className={cn(
-              "pb-2 font-medium",
+              "pb-2 font-medium whitespace-nowrap",
               activeTab === "history"
                 ? `border-b-2 text-[${PRIMARY}] border-[${PRIMARY}]`
                 : "text-gray-500"
@@ -456,7 +636,7 @@ const MentalTracker: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
+                <div className="h-[220px] md:h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                       data={chartData}
@@ -464,7 +644,7 @@ const MentalTracker: React.FC = () => {
                     >
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="date" />
-                      <YAxis domain={[1, 5]} />
+                      <YAxis domain={[1, 5]} allowDecimals={false} />
                       <Tooltip />
                       <Legend />
                       <Line
@@ -518,12 +698,7 @@ const MentalTracker: React.FC = () => {
                             style={{ color: PRIMARY }}
                           >
                             {entries.length > 0
-                              ? (
-                                  entries.reduce(
-                                    (sum, entry) => sum + entry.mood,
-                                    0
-                                  ) / entries.length
-                                ).toFixed(1)
+                              ? round1(avgMood).toFixed(1)
                               : "3.8"}
                           </div>
                           <div className="text-xs text-gray-500">Avg. Mood</div>
@@ -534,12 +709,7 @@ const MentalTracker: React.FC = () => {
                             style={{ color: PRIMARY }}
                           >
                             {entries.length > 0
-                              ? (
-                                  entries.reduce(
-                                    (sum, entry) => sum + entry.anxiety,
-                                    0
-                                  ) / entries.length
-                                ).toFixed(1)
+                              ? round1(avgAnxiety).toFixed(1)
                               : "4.1"}
                           </div>
                           <div className="text-xs text-gray-500">
@@ -552,12 +722,7 @@ const MentalTracker: React.FC = () => {
                             style={{ color: PRIMARY }}
                           >
                             {entries.length > 0
-                              ? (
-                                  entries.reduce(
-                                    (sum, entry) => sum + entry.sleep,
-                                    0
-                                  ) / entries.length
-                                ).toFixed(1)
+                              ? round1(avgSleep).toFixed(1)
                               : "3.5"}
                           </div>
                           <div className="text-xs text-gray-500">
@@ -575,11 +740,12 @@ const MentalTracker: React.FC = () => {
                             Trend
                           </Badge>
                           <span>
-                            Your mood appears to be{" "}
                             {entries.length > 0
-                              ? "stable with some improvement"
-                              : "improving"}{" "}
-                            over the past week.
+                              ? `${
+                                  trendLabel.charAt(0).toUpperCase() +
+                                  trendLabel.slice(1)
+                                } — ${trendMessage}`
+                              : "No entries yet to compute trend."}
                           </span>
                         </li>
                         <li className="flex items-start gap-2">
@@ -587,18 +753,22 @@ const MentalTracker: React.FC = () => {
                             Pattern
                           </Badge>
                           <span>
-                            There seems to be a correlation between your sleep
-                            quality and mood the following day.
+                            {entries.length > 1
+                              ? patternMessage
+                              : "Not enough data to determine patterns yet."}
                           </span>
                         </li>
                         <li className="flex items-start gap-2">
                           <Badge variant="outline" className="mt-1">
                             Suggestion
                           </Badge>
-                          <span>
-                            Consider focusing on improving your sleep habits to
-                            potentially boost your overall mood.
-                          </span>
+                          <div>
+                            {suggestions.map((s, i) => (
+                              <div key={i} className="text-sm">
+                                • {s}
+                              </div>
+                            ))}
+                          </div>
                         </li>
                       </ul>
                     </div>
@@ -616,23 +786,15 @@ const MentalTracker: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[250px]">
+                  <div className="h-[200px] md:h-[250px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
-                        data={[
-                          { day: "Mon", mood: 3.5 },
-                          { day: "Tue", mood: 3.2 },
-                          { day: "Wed", mood: 3.8 },
-                          { day: "Thu", mood: 4.1 },
-                          { day: "Fri", mood: 4.5 },
-                          { day: "Sat", mood: 4.2 },
-                          { day: "Sun", mood: 3.7 },
-                        ]}
+                        data={weeklyDistribution}
                         margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="day" />
-                        <YAxis domain={[0, 5]} />
+                        <YAxis domain={[0, 5]} allowDecimals={false} />
                         <Tooltip />
                         <Bar
                           dataKey="mood"
