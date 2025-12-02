@@ -27,6 +27,7 @@ const AdminLayout: React.FC = () => {
 
   const role = (user?.role ?? "").toString().toLowerCase();
 
+  // Main navigation (NOTE: Settings removed from here; moved to bottom "System" section)
   let navigation: {
     name: string;
     href: string;
@@ -38,7 +39,7 @@ const AdminLayout: React.FC = () => {
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "Users", href: "/admin/users", icon: UsersIcon },
       { name: "Booking List", href: "/admin/bookinglist", icon: Menu },
-      { name: "Settings", href: "/admin/settings", icon: Settings },
+      // Settings intentionally removed from main nav
     ];
   } else if (role === "counselor") {
     navigation = [
@@ -46,14 +47,21 @@ const AdminLayout: React.FC = () => {
       { name: "Booking List", href: "/admin/bookinglist", icon: Menu },
       { name: "Calendar", href: "/admin/calendar", icon: Calendar },
       { name: "Session Notes", href: "/admin/notes", icon: Notebook },
-      { name: "Settings", href: "/admin/settings", icon: Settings },
+      // Settings intentionally removed from main nav
     ];
   } else {
     navigation = [
       { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-      { name: "Settings", href: "/admin/settings", icon: Settings },
+      // Settings intentionally removed from main nav
     ];
   }
+
+  // System section (pinned to bottom)
+  const systemItems: {
+    name: string;
+    href: string;
+    icon: React.ComponentType<any>;
+  }[] = [{ name: "Settings", href: "/admin/settings", icon: Settings }];
 
   const roleLabel =
     role === "admin"
@@ -149,7 +157,7 @@ const AdminLayout: React.FC = () => {
             </div>
           )}
 
-          {/* Navigation */}
+          {/* Navigation (main) */}
           <nav className="flex-1 p-2 md:p-4 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
@@ -179,6 +187,50 @@ const AdminLayout: React.FC = () => {
               );
             })}
           </nav>
+
+          {/* System section pinned to bottom */}
+          <div
+            className={`mt-auto border-t ${borderColor} p-3 md:p-4 flex-shrink-0`}
+          >
+            {/* optional section label visible when expanded */}
+            {!collapsed && (
+              <div className="mb-2 text-xs font-semibold text-white/80">
+                System
+              </div>
+            )}
+
+            <div className="flex items-center">
+              {systemItems.map((item) => {
+                const isActive = location.pathname === item.href;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    title={item.name}
+                    className={`flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-colors w-full ${
+                      isActive ? navActive : navInactive
+                    } ${collapsed ? "justify-center" : "justify-start"}`}
+                  >
+                    <Icon
+                      className={`${
+                        collapsed ? "" : "mr-3"
+                      } h-5 w-5 flex-shrink-0 ${
+                        isActive
+                          ? isDark
+                            ? "text-white"
+                            : "text-blue-800"
+                          : iconColor
+                      }`}
+                    />
+                    {!collapsed && (
+                      <span className="truncate">{item.name}</span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </aside>
 
