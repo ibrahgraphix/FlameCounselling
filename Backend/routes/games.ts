@@ -6,6 +6,7 @@ const router = express.Router();
 
 // Public endpoints used by frontend games
 router.post("/mood", controller.postMood); // POST /api/games/mood
+router.post("/log", controller.postMood); // alias: POST /api/games/log
 router.get("/mood-entries", controller.getMoodEntries); // GET /api/games/mood-entries?userId=123
 router.post("/participate", controller.postParticipate); // POST /api/games/participate
 

@@ -8,12 +8,20 @@ import { MoodEntry, GameParticipation } from "../models/mood";
  */
 export const postMood = async (req: Request, res: Response) => {
   try {
+    // Log incoming request path and a short body preview for debugging
+    console.info(`[gamesController] POST ${req.path} payload:`, {
+      userId: req.body?.userId ?? null,
+      mood: req.body?.mood ?? null,
+      date: req.body?.date ?? null,
+    });
+
     const payload: MoodEntry = req.body;
     // If user is not logged-in, frontend may send userId: null
     const saved = await service.saveMoodEntry(payload);
     return res.status(201).json({ success: true, data: saved });
   } catch (err: any) {
     console.error("postMood error:", err);
+    // Return 400 for validation errors (service throws) but include message
     return res
       .status(400)
       .json({ success: false, message: err.message || "Bad request" });
@@ -64,7 +72,6 @@ export const postParticipate = async (req: Request, res: Response) => {
 
 /**
  * GET /api/games/admin-weekly-mood?days=7
- * Public admin endpoint — protect with auth middleware in your routes if needed.
  */
 export const getAdminWeeklyMood = async (req: Request, res: Response) => {
   try {

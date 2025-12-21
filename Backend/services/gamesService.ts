@@ -5,18 +5,47 @@ import { format, subDays } from "date-fns";
 
 /**
  * Save mood entry business logic (validation)
+ *
+ * This is intentionally tolerant:
+ * - if date is missing we default to today (yyyy-MM-dd)
+ * - if mood is a string that can be coerced to number, we coerce it
  */
 export const saveMoodEntry = async (payload: MoodEntry): Promise<MoodEntry> => {
+  // default date to today if missing
   if (!payload.date) {
-    throw new Error("date is required (YYYY-MM-DD)");
+    payload.date = format(new Date(), "yyyy-MM-dd");
   }
+
+  // coerce mood if possible
   if (typeof payload.mood !== "number") {
+    const maybeNum =
+      payload.mood !== undefined && payload.mood !== null
+        ? Number(payload.mood as any)
+        : NaN;
+    if (!Number.isNaN(maybeNum)) {
+      payload.mood = maybeNum;
+    }
+  }
+
+  if (typeof payload.mood !== "number" || Number.isNaN(payload.mood)) {
     throw new Error("mood is required and must be a number 1..5");
   }
+
+  // ensure mood range
   if (payload.mood < 1 || payload.mood > 5) {
     throw new Error("mood must be between 1 and 5");
   }
-  // optional: validate anxiety/sleep if present
+
+  // optional: validate anxiety/sleep if present (coerce strings to numbers)
+  if (payload.anxiety !== undefined && payload.anxiety !== null) {
+    const aNum = Number(payload.anxiety as any);
+    payload.anxiety = Number.isNaN(aNum) ? null : aNum;
+  }
+  if (payload.sleep !== undefined && payload.sleep !== null) {
+    const sNum = Number(payload.sleep as any);
+    payload.sleep = Number.isNaN(sNum) ? null : sNum;
+  }
+
   return repo.saveMoodEntry(payload);
 };
 
@@ -38,9 +67,6 @@ export const saveGameParticipation = async (payload: GameParticipation) => {
 
 /**
  * Build mood distribution array used by admin dashboard.
- *
- * returns array of 7 (or days) objects:
- * [{ name: "Mon", excellent: number, good: number, neutral: number, poor: number, bad: number }, ...]
  */
 export const getWeeklyMoodDistribution = async (days = 7) => {
   const raw = await repo.getMoodCountsGroupedByDateAndMood(days);
