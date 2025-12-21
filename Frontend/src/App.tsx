@@ -20,6 +20,7 @@ import MentalTracker from "./pages/user/games/MentalTracker";
 import Appointments from "./pages/user/Appointments";
 import GameZone from "./pages/user/games/GameZone";
 import StressQuiz from "./pages/user/games/StressQuiz";
+import MindMatchingGame from "./pages/user/games/MindMatchingGame";
 // Static Pages
 import About from "./pages/static/About";
 import Contact from "./pages/static/Contact";
@@ -100,6 +101,15 @@ const App: React.FC = () => {
                   </AppLayout>
                 }
               />
+              <Route
+                path="/gamezone/mind-matching"
+                element={
+                  <AppLayout>
+                    <MindMatchingGame />
+                  </AppLayout>
+                }
+              />
+
               <Route
                 path="/appointments"
                 element={

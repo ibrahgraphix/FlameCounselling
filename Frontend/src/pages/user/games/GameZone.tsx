@@ -45,10 +45,9 @@ const GameZone: React.FC = () => {
       id: "mind-match",
       title: "Mind Match",
       desc: "Memory-style pairing game to practise focus & coping skill association.",
-      details:
-        "A fun matching game to reinforce healthy coping strategies. Coming soon!",
-      route: `${baseRoute}/mind-match`,
-      ready: false,
+      details: "A fun matching game to reinforce healthy coping strategies.",
+      route: `${baseRoute}/mind-matching`,
+      ready: true, // Enabled
     },
   ];
 
@@ -111,7 +110,7 @@ const GameZone: React.FC = () => {
                 <p className={`${mutedText} text-sm mb-4`}>{g.details}</p>
 
                 {g.ready ? (
-                  // Link navigates to the stress quiz or mood tracker route when button is clicked
+                  // Link navigates to the corresponding game route when button is clicked
                   <Link to={g.route}>
                     <Button
                       className="rounded-full px-4 py-2"
