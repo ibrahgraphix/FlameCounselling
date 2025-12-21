@@ -4,12 +4,7 @@ import MemoryCard from "@/pages/user/games/MemoryCard";
 import GameOverModal from "@/pages/user/games/GameOverModal";
 import { postParticipate, postMoodEntry } from "@/services/gamesAPI";
 import { format } from "date-fns";
-
-/**
- * Mind Matching Game
- *
- * Drop this component into your routes (e.g. /games/mind-match).
- */
+import { useDetectDarkMode } from "@/components/ui/card";
 
 type CardItem = {
   uid: string; // unique per card instance
@@ -35,18 +30,15 @@ const duplicateAndShuffle = (
   strategies: typeof COPING_STRATEGIES,
   pairsCount = 6
 ) => {
-  // choose first `pairsCount` strategies (or shuffle and slice)
-  const chosen = (() => {
-    if (pairsCount >= strategies.length)
-      return strategies.slice(0, strategies.length);
-    const copy = [...strategies];
-    // simple shuffle
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    return copy.slice(0, pairsCount);
-  })();
+  const copy = [...strategies];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  const chosen =
+    pairsCount >= copy.length
+      ? copy.slice(0, copy.length)
+      : copy.slice(0, pairsCount);
 
   const cards: CardItem[] = [];
   chosen.forEach((s) => {
@@ -69,7 +61,7 @@ const duplicateAndShuffle = (
     cards.push(a, b);
   });
 
-  // shuffle cards
+  // shuffle final cards
   for (let i = cards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [cards[i], cards[j]] = [cards[j], cards[i]];
@@ -79,12 +71,19 @@ const duplicateAndShuffle = (
 };
 
 const MindMatchingGame: React.FC = () => {
+  // detect theme like GameZone
+  const isDark = useDetectDarkMode();
+  const bgColor = isDark ? "bg-gray-900" : "bg-white";
+  const textColor = isDark ? "text-gray-300" : "text-gray-800";
+  const mutedText = isDark ? "text-gray-400" : "text-gray-600";
+  const gradient = "linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)";
+
   // Try to detect userId from localStorage; if not present send null
   const rawUserId =
     typeof window !== "undefined" ? localStorage.getItem("userId") : null;
   const userId = rawUserId ? Number(rawUserId) || null : null;
 
-  const PAIRS = 6; // default number of pairs; you can change to 4/6/8 for difficulty
+  const PAIRS = 6; // default number of pairs
   const [cards, setCards] = useState<CardItem[]>(() =>
     duplicateAndShuffle(COPING_STRATEGIES, PAIRS)
   );
@@ -118,7 +117,6 @@ const MindMatchingGame: React.FC = () => {
 
   useEffect(() => {
     if (matchedCount === PAIRS) {
-      // game over
       if (timerRef.current) window.clearInterval(timerRef.current);
       setShowModal(true);
     }
@@ -158,6 +156,13 @@ const MindMatchingGame: React.FC = () => {
         setCards((prev) => {
           const firstCard = prev.find((c) => c.uid === first.uid)!;
           const secondCard = prev.find((c) => c.uid === card.uid)!;
+          if (!firstCard || !secondCard) {
+            setFirst(null);
+            setSecond(null);
+            setDisabled(false);
+            return prev;
+          }
+
           if (firstCard.strategyId === secondCard.strategyId) {
             // matched
             const next = prev.map((c) =>
@@ -192,7 +197,6 @@ const MindMatchingGame: React.FC = () => {
   };
 
   const submitResultsManually = async () => {
-    // in case you want a manual submit button outside the modal (not used here)
     const matchedPairs = cards
       .filter((c) => c.matched)
       .map((c) => c.strategyId)
@@ -227,17 +231,30 @@ const MindMatchingGame: React.FC = () => {
   }, [cards]);
 
   return (
-    <div className="min-h-screen p-6">
+    <div className={`min-h-screen py-8 px-4 ${bgColor}`}>
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-semibold">
-            Mind Matching — Coping Strategies
-          </h2>
+          <div>
+            <h2
+              className={`text-2xl font-semibold ${textColor}`}
+              style={{
+                background: gradient,
+                WebkitBackgroundClip: "text",
+                color: "transparent",
+              }}
+            >
+              Mind Matching — Coping Strategies
+            </h2>
+            <p className={`text-sm ${mutedText}`}>
+              Practice focus and reinforce healthy coping strategies.
+            </p>
+          </div>
+
           <div className="flex gap-2 items-center">
-            <div className="text-sm text-muted-foreground">
+            <div className={`text-sm ${mutedText}`}>
               Attempts: <strong>{attempts}</strong>
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className={`text-sm ${mutedText}`}>
               Time: <strong>{timeElapsed}s</strong>
             </div>
             <button
@@ -249,7 +266,7 @@ const MindMatchingGame: React.FC = () => {
           </div>
         </div>
 
-        <p className="mb-4 text-sm text-muted-foreground">
+        <p className={`mb-4 text-sm ${mutedText}`}>
           Match pairs of healthy coping strategies. Each successful match
           reinforces that strategy.
         </p>
@@ -288,7 +305,6 @@ const MindMatchingGame: React.FC = () => {
 
           <button
             onClick={async () => {
-              // allow manual submit if user wants to send results now
               await submitResultsManually();
             }}
             className="px-4 py-2 rounded-md bg-indigo-600 text-white"
