@@ -361,7 +361,12 @@ const AdminDashboard: React.FC = () => {
                       allowDecimals={false}
                       tickFormatter={(v) => `${Math.round(Number(v))}`}
                     />
+                    {/* 
+                      Disabled the default Tooltip cursor overlay here to remove
+                      the grey rectangle that appeared on hover.
+                    */}
                     <Tooltip
+                      cursor={false}
                       wrapperStyle={{
                         borderRadius: 8,
                         boxShadow: "0 6px 18px rgba(30,58,138,0.08)",
