@@ -30,9 +30,16 @@ const GameOverModal: React.FC<Props> = ({
   if (!open) return null;
 
   const handleSubmit = async () => {
+    setSubmitting(true);
     try {
-      setSubmitting(true);
-      // send participate
+      // Send mood first (so admin weekly mood gets updated even if participate fails)
+      await postMoodEntry({
+        userId,
+        mood,
+        notes: notes || null,
+      });
+
+      // Then send participate metadata (best-effort)
       await postParticipate({
         userId,
         gameName,
@@ -44,18 +51,13 @@ const GameOverModal: React.FC<Props> = ({
         },
       });
 
-      // send mood entry (date filled on server-side if necessary)
-      await postMoodEntry({
-        userId,
-        mood,
-        notes: notes || null,
-      });
-
       if (onSubmitted) onSubmitted();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Submit game results error:", err);
-      alert("Failed to submit game results. Try again.");
+      // show more helpful error to user
+      const msg = err?.message ?? "Failed to submit game results. Try again.";
+      alert(msg);
     } finally {
       setSubmitting(false);
     }

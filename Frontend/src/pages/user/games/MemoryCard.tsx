@@ -20,41 +20,44 @@ const MemoryCard: React.FC<MemoryCardProps> = ({
   onClick,
   disabled,
 }) => {
-  // inline styles for reliable 3D flip (no custom tailwind rotate classes required)
+  // container provides perspective
   const containerStyle: React.CSSProperties = {
     perspective: "1000px",
-    width: "100%",
-    height: "100%",
+    width: "120px",
+    height: "160px",
   };
 
+  // inner rotates
   const innerStyle: React.CSSProperties = {
     position: "relative",
     width: "100%",
     height: "100%",
-    transition: "transform 300ms ease",
+    transition: "transform 320ms cubic-bezier(.2,.9,.2,1)",
     transformStyle: "preserve-3d",
     transform: flipped || matched ? "rotateY(180deg)" : "rotateY(0deg)",
   };
 
-  const faceStyle: React.CSSProperties = {
+  const faceCommon: React.CSSProperties = {
     position: "absolute",
     inset: 0,
     WebkitBackfaceVisibility: "hidden",
     backfaceVisibility: "hidden",
-    borderRadius: "0.75rem",
+    borderRadius: 16,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   };
 
   const frontStyle: React.CSSProperties = {
-    ...faceStyle,
+    ...faceCommon,
     transform: "rotateY(0deg)",
   };
 
   const backStyle: React.CSSProperties = {
-    ...faceStyle,
+    ...faceCommon,
     transform: "rotateY(180deg)",
+    padding: 12,
+    boxSizing: "border-box",
   };
 
   return (
@@ -63,35 +66,44 @@ const MemoryCard: React.FC<MemoryCardProps> = ({
       disabled={flipped || matched || disabled}
       aria-pressed={flipped || matched}
       className={clsx(
-        "w-24 h-32 sm:w-28 sm:h-36 rounded-xl focus:outline-none",
-        "shadow"
+        "rounded-xl focus:outline-none",
+        "shadow-lg",
+        "hover:scale-[1.02] active:scale-[0.99] transition-transform"
       )}
       style={containerStyle}
     >
       <div style={innerStyle}>
-        {/* FRONT (face-down) */}
+        {/* FRONT (face-down) - still looks like a card but subtle */}
         <div
           style={frontStyle}
-          className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-gray-800 dark:to-gray-700"
+          className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-gray-800 dark:to-gray-700 border border-slate-200 dark:border-gray-700"
         >
-          <div className="text-lg sm:text-sm text-gray-600 dark:text-gray-300 select-none">
-            ?
+          <div className="flex flex-col items-center justify-center select-none">
+            <div className="text-2xl mb-1 text-slate-500 dark:text-slate-300">
+              ?
+            </div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              Flip
+            </div>
           </div>
         </div>
 
-        {/* BACK (face-up) */}
+        {/* BACK (face-up) - full card content */}
         <div
           style={backStyle}
           className={clsx(
-            "p-2",
+            "border",
             matched
-              ? "bg-green-50 dark:bg-green-900/30"
+              ? "border-green-300 dark:border-green-700"
+              : "border-slate-200 dark:border-gray-700",
+            matched
+              ? "bg-green-50 dark:bg-green-900/20"
               : "bg-white dark:bg-slate-800"
           )}
         >
-          <div className="flex flex-col items-center justify-center">
-            <div className="text-2xl mb-1 select-none">{emoji ?? "🧠"}</div>
-            <div className="text-xs text-center px-1 leading-tight">
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className="text-3xl mb-2 select-none">{emoji ?? "🧠"}</div>
+            <div className="text-sm text-center px-1 font-medium leading-tight">
               {label}
             </div>
           </div>

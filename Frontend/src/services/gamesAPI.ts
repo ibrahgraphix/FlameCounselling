@@ -19,22 +19,51 @@ export interface MoodEntryPayload {
 
 const API_BASE = "/api/games";
 
+async function fetchWithOptionalOrigin(url: string, opts: RequestInit) {
+  // Try the url as given
+  let res = await fetch(url, opts);
+  // If 404 and running in browser, attempt with absolute origin
+  if (res.status === 404 && typeof window !== "undefined") {
+    try {
+      const alt = `${window.location.origin}${url}`;
+      if (alt !== url) {
+        res = await fetch(alt, opts);
+      }
+    } catch (e) {
+      // ignore and return original res
+    }
+  }
+  return res;
+}
+
 /**
  * Post a game participation record
  */
 export const postParticipate = async (payload: GameParticipationPayload) => {
-  const res = await fetch(`${API_BASE}/participate`, {
+  const url = `${API_BASE}/participate`;
+  const res = await fetchWithOptionalOrigin(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+
+  // Try to parse server-provided JSON error/message
+  let body: any = null;
+  try {
+    body = await res.json();
+  } catch (e) {
+    // no json
+  }
+
   if (!res.ok) {
-    const err = await res.json().catch(() => null);
+    const serverMsg = body?.message ?? body?.error ?? body ?? null;
     throw new Error(
-      err?.message || `Failed to post participate (${res.status})`
+      serverMsg
+        ? `Failed to post participate (${res.status}): ${serverMsg}`
+        : `Failed to post participate (${res.status})`
     );
   }
-  return res.json();
+  return body;
 };
 
 /**
@@ -50,14 +79,26 @@ export const postMoodEntry = async (payload: Partial<MoodEntryPayload>) => {
     sleep: payload.sleep ?? null,
     notes: payload.notes ?? null,
   };
-  const res = await fetch(`${API_BASE}/mood`, {
+
+  const url = `${API_BASE}/mood`;
+  const res = await fetchWithOptionalOrigin(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payloadSafe),
   });
+
+  let body: any = null;
+  try {
+    body = await res.json();
+  } catch (e) {}
+
   if (!res.ok) {
-    const err = await res.json().catch(() => null);
-    throw new Error(err?.message || `Failed to post mood (${res.status})`);
+    const serverMsg = body?.message ?? body ?? null;
+    throw new Error(
+      serverMsg
+        ? `Failed to post mood (${res.status}): ${serverMsg}`
+        : `Failed to post mood (${res.status})`
+    );
   }
-  return res.json();
+  return body;
 };

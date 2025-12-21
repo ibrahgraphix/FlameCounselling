@@ -7,8 +7,8 @@ import { format } from "date-fns";
 import { useDetectDarkMode } from "@/components/ui/card";
 
 type CardItem = {
-  uid: string; // unique per card instance
-  strategyId: string; // same for two pair cards
+  uid: string;
+  strategyId: string;
   label: string;
   emoji?: string;
   flipped: boolean;
@@ -61,7 +61,6 @@ const duplicateAndShuffle = (
     cards.push(a, b);
   });
 
-  // shuffle final cards
   for (let i = cards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [cards[i], cards[j]] = [cards[j], cards[i]];
@@ -71,19 +70,17 @@ const duplicateAndShuffle = (
 };
 
 const MindMatchingGame: React.FC = () => {
-  // detect theme like GameZone
   const isDark = useDetectDarkMode();
   const bgColor = isDark ? "bg-gray-900" : "bg-white";
   const textColor = isDark ? "text-gray-300" : "text-gray-800";
   const mutedText = isDark ? "text-gray-400" : "text-gray-600";
   const gradient = "linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)";
 
-  // Try to detect userId from localStorage; if not present send null
   const rawUserId =
     typeof window !== "undefined" ? localStorage.getItem("userId") : null;
   const userId = rawUserId ? Number(rawUserId) || null : null;
 
-  const PAIRS = 6; // default number of pairs
+  const PAIRS = 6;
   const [cards, setCards] = useState<CardItem[]>(() =>
     duplicateAndShuffle(COPING_STRATEGIES, PAIRS)
   );
@@ -97,7 +94,6 @@ const MindMatchingGame: React.FC = () => {
   const timerRef = useRef<number | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  // start timer when first flip occurs
   useEffect(() => {
     if (startTime === null && cards.some((c) => c.flipped)) {
       setStartTime(Date.now());
@@ -137,7 +133,6 @@ const MindMatchingGame: React.FC = () => {
   const handleCardClick = (card: CardItem) => {
     if (disabled || card.flipped || card.matched) return;
 
-    // flip the clicked card
     setCards((prev) =>
       prev.map((c) => (c.uid === card.uid ? { ...c, flipped: true } : c))
     );
@@ -164,7 +159,6 @@ const MindMatchingGame: React.FC = () => {
           }
 
           if (firstCard.strategyId === secondCard.strategyId) {
-            // matched
             const next = prev.map((c) =>
               c.strategyId === firstCard.strategyId
                 ? { ...c, matched: true, flipped: true }
@@ -176,7 +170,6 @@ const MindMatchingGame: React.FC = () => {
             setDisabled(false);
             return next;
           } else {
-            // flip back
             const next = prev.map((c) =>
               c.uid === firstCard.uid || c.uid === secondCard.uid
                 ? { ...c, flipped: false }
@@ -193,7 +186,8 @@ const MindMatchingGame: React.FC = () => {
   };
 
   const onModalSubmitted = () => {
-    // nothing extra needed here; admin will get data from backend
+    // After user submits, you might want to auto-reset the board
+    handleReset(PAIRS);
   };
 
   const submitResultsManually = async () => {
@@ -203,13 +197,7 @@ const MindMatchingGame: React.FC = () => {
       .filter((v, i, arr) => arr.indexOf(v) === i);
 
     try {
-      await postParticipate({
-        userId,
-        gameName: "mind_matching",
-        score: matchedPairs.length,
-        meta: { attempts, timeTakenSec: timeElapsed, matchedPairs },
-      });
-
+      // post mood first so admin weekly mood picks it up
       await postMoodEntry({
         userId,
         date: format(new Date(), "yyyy-MM-dd"),
@@ -217,10 +205,17 @@ const MindMatchingGame: React.FC = () => {
         notes: "Submitted from manual button",
       });
 
+      await postParticipate({
+        userId,
+        gameName: "mind_matching",
+        score: matchedPairs.length,
+        meta: { attempts, timeTakenSec: timeElapsed, matchedPairs },
+      });
+
       alert("Result submitted");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to submit results.");
+      alert(err?.message ?? "Failed to submit results.");
     }
   };
 
@@ -272,7 +267,7 @@ const MindMatchingGame: React.FC = () => {
         </p>
 
         <div
-          className="grid gap-3 justify-center"
+          className="grid gap-4 justify-center"
           style={{
             gridTemplateColumns:
               cards.length <= 8
@@ -304,16 +299,13 @@ const MindMatchingGame: React.FC = () => {
           </button>
 
           <button
-            onClick={async () => {
-              await submitResultsManually();
-            }}
+            onClick={submitResultsManually}
             className="px-4 py-2 rounded-md bg-indigo-600 text-white"
           >
             Submit Results Now
           </button>
         </div>
 
-        {/* Game Over Modal */}
         <GameOverModal
           open={showModal}
           onClose={() => setShowModal(false)}
