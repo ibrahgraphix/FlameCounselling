@@ -3,13 +3,6 @@ import * as repo from "../repositories/gamesRepository";
 import { MoodEntry, GameParticipation } from "../models/mood";
 import { format, subDays } from "date-fns";
 
-/**
- * Save mood entry business logic (validation)
- *
- * This is intentionally tolerant:
- * - if date is missing we default to today (yyyy-MM-dd)
- * - if mood is a string that can be coerced to number, we coerce it
- */
 export const saveMoodEntry = async (payload: MoodEntry): Promise<MoodEntry> => {
   // default date to today if missing
   if (!payload.date) {
