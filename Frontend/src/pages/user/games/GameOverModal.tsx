@@ -126,7 +126,7 @@ const GameOverModal: React.FC<Props> = ({
             disabled={submitting}
             className="px-4 py-2 rounded-md bg-gradient-to-r from-sky-500 to-indigo-600 text-white"
           >
-            {submitting ? "Sending..." : "Submit & Log Mood"}
+            {submitting ? "Sending..." : "Submit"}
           </button>
         </div>
       </div>

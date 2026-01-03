@@ -26,7 +26,6 @@ const MemoryCard: React.FC<MemoryCardProps> = ({
     width: "120px",
     height: "160px",
   };
-
   // inner rotates
   const innerStyle: React.CSSProperties = {
     position: "relative",
@@ -36,7 +35,6 @@ const MemoryCard: React.FC<MemoryCardProps> = ({
     transformStyle: "preserve-3d",
     transform: flipped || matched ? "rotateY(180deg)" : "rotateY(0deg)",
   };
-
   const faceCommon: React.CSSProperties = {
     position: "absolute",
     inset: 0,
@@ -47,19 +45,16 @@ const MemoryCard: React.FC<MemoryCardProps> = ({
     alignItems: "center",
     justifyContent: "center",
   };
-
   const frontStyle: React.CSSProperties = {
     ...faceCommon,
     transform: "rotateY(0deg)",
   };
-
   const backStyle: React.CSSProperties = {
     ...faceCommon,
     transform: "rotateY(180deg)",
     padding: 12,
     boxSizing: "border-box",
   };
-
   return (
     <button
       onClick={onClick}
@@ -73,29 +68,28 @@ const MemoryCard: React.FC<MemoryCardProps> = ({
       style={containerStyle}
     >
       <div style={innerStyle}>
-        {/* FRONT (face-down) - still looks like a card but subtle */}
+        {/* FRONT (face-down) - styled like a real card back with theme gradient */}
         <div
           style={frontStyle}
-          className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-gray-800 dark:to-gray-700 border border-slate-200 dark:border-gray-700"
+          className="bg-gradient-to-br from-sky-50 via-indigo-50 to-purple-50 dark:from-slate-800 dark:via-slate-700 dark:to-slate-900 border-2 border-sky-200 dark:border-slate-600 shadow-md"
         >
-          <div className="flex flex-col items-center justify-center select-none">
-            <div className="text-2xl mb-1 text-slate-500 dark:text-slate-300">
+          <div className="flex flex-col items-center justify-center select-none p-3">
+            <div className="text-5xl mb-2 text-sky-400 dark:text-sky-300">
               ?
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">
-              Flip
+            <div className="text-xs font-semibold text-sky-600 dark:text-sky-300 tracking-wide">
+              Flip Me
             </div>
           </div>
         </div>
-
         {/* BACK (face-up) - full card content */}
         <div
           style={backStyle}
           className={clsx(
-            "border",
+            "border-2",
             matched
               ? "border-green-300 dark:border-green-700"
-              : "border-slate-200 dark:border-gray-700",
+              : "border-sky-200 dark:border-slate-600",
             matched
               ? "bg-green-50 dark:bg-green-900/20"
               : "bg-white dark:bg-slate-800"
