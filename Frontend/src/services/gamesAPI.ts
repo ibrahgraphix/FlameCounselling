@@ -17,53 +17,38 @@ export interface MoodEntryPayload {
   notes?: string | null;
 }
 
-const API_BASE = "/api/games";
+const API_BASE =
+  import.meta.env.VITE_API_URL || "https://flamestudentcouncil.in:4000";
 
-async function fetchWithOptionalOrigin(url: string, opts: RequestInit) {
-  // Try the url as given
-  let res = await fetch(url, opts);
-  // If 404 and running in browser, attempt with absolute origin
-  if (res.status === 404 && typeof window !== "undefined") {
-    try {
-      const alt = `${window.location.origin}${url}`;
-      if (alt !== url) {
-        res = await fetch(alt, opts);
-      }
-    } catch (e) {
-      // ignore and return original res
-    }
-  }
-  return res;
-}
-
-/**
- * Post a game participation record
- */
-export const postParticipate = async (payload: GameParticipationPayload) => {
-  const url = `${API_BASE}/participate`;
-  const res = await fetchWithOptionalOrigin(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  // Try to parse server-provided JSON error/message
+async function fetchWithErrorHandling(url: string, opts: RequestInit) {
+  const res = await fetch(url, opts);
   let body: any = null;
   try {
     body = await res.json();
   } catch (e) {
     // no json
   }
-
   if (!res.ok) {
     const serverMsg = body?.message ?? body?.error ?? body ?? null;
     throw new Error(
       serverMsg
-        ? `Failed to post participate (${res.status}): ${serverMsg}`
-        : `Failed to post participate (${res.status})`
+        ? `Failed to post mood (${res.status}): ${serverMsg}`
+        : `Failed to post mood (${res.status})`
     );
   }
   return body;
+}
+
+/**
+ * Post a game participation record
+ */
+export const postParticipate = async (payload: GameParticipationPayload) => {
+  const url = `${API_BASE}/api/games/participate`;
+  return fetchWithErrorHandling(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 };
 
 /**
@@ -79,26 +64,10 @@ export const postMoodEntry = async (payload: Partial<MoodEntryPayload>) => {
     sleep: payload.sleep ?? null,
     notes: payload.notes ?? null,
   };
-
-  const url = `${API_BASE}/mood`;
-  const res = await fetchWithOptionalOrigin(url, {
+  const url = `${API_BASE}/api/games/mood`;
+  return fetchWithErrorHandling(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payloadSafe),
   });
-
-  let body: any = null;
-  try {
-    body = await res.json();
-  } catch (e) {}
-
-  if (!res.ok) {
-    const serverMsg = body?.message ?? body ?? null;
-    throw new Error(
-      serverMsg
-        ? `Failed to post mood (${res.status}): ${serverMsg}`
-        : `Failed to post mood (${res.status})`
-    );
-  }
-  return body;
 };
