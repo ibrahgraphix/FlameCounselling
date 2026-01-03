@@ -8,7 +8,6 @@ export const saveMoodEntry = async (payload: MoodEntry): Promise<MoodEntry> => {
   if (!payload.date) {
     payload.date = format(new Date(), "yyyy-MM-dd");
   }
-
   // coerce mood if possible
   if (typeof payload.mood !== "number") {
     const maybeNum =
@@ -19,16 +18,13 @@ export const saveMoodEntry = async (payload: MoodEntry): Promise<MoodEntry> => {
       payload.mood = maybeNum;
     }
   }
-
   if (typeof payload.mood !== "number" || Number.isNaN(payload.mood)) {
     throw new Error("mood is required and must be a number 1..5");
   }
-
   // ensure mood range
   if (payload.mood < 1 || payload.mood > 5) {
     throw new Error("mood must be between 1 and 5");
   }
-
   // optional: validate anxiety/sleep if present (coerce strings to numbers)
   if (payload.anxiety !== undefined && payload.anxiety !== null) {
     const aNum = Number(payload.anxiety as any);
@@ -38,7 +34,6 @@ export const saveMoodEntry = async (payload: MoodEntry): Promise<MoodEntry> => {
     const sNum = Number(payload.sleep as any);
     payload.sleep = Number.isNaN(sNum) ? null : sNum;
   }
-
   return repo.saveMoodEntry(payload);
 };
 
@@ -75,7 +70,6 @@ export const getWeeklyMoodDistribution = async (days = 7) => {
     if (!map.has(dayStr)) map.set(dayStr, {});
     map.get(dayStr)![mood] = cnt;
   });
-
   const res: Array<{
     name: string;
     excellent: number;
@@ -84,7 +78,6 @@ export const getWeeklyMoodDistribution = async (days = 7) => {
     poor: number;
     bad: number;
   }> = [];
-
   for (let i = days - 1; i >= 0; i--) {
     const d = subDays(new Date(), i);
     const dateStr = format(d, "yyyy-MM-dd");
@@ -99,6 +92,5 @@ export const getWeeklyMoodDistribution = async (days = 7) => {
       bad: row[1] ?? 0,
     });
   }
-
   return res;
 };
