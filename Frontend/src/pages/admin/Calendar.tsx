@@ -501,31 +501,8 @@ const CalendarPage: React.FC = () => {
 
       `}</style>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
         <div className="flex items-center space-x-4">
-          <h1
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: headingColor }}
-          >
-            My Calendar
-          </h1>
-          <div className="text-sm" style={{ color: muted }}>
-            {counselor ? (
-              <span>
-                Signed in as{" "}
-                <strong style={{ color: headingColor }}>
-                  {counselor.name ?? counselor.email ?? "Counselor"}
-                </strong>
-              </span>
-            ) : (
-              <span>
-                {loading ? "Loading counselor…" : "No counselor profile found"}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
           {/* Show Connect button only when counselor is present and not connected */}
           {counselor &&
             !counselor.raw?.google_connected &&
@@ -561,6 +538,26 @@ const CalendarPage: React.FC = () => {
                 Google Calendar connected
               </div>
             )}
+          <h1
+            className="text-2xl font-bold tracking-tight"
+            style={{ color: headingColor }}
+          >
+            My Calendar
+          </h1>
+          <div className="text-sm" style={{ color: muted }}>
+            {counselor ? (
+              <span>
+                Signed in as{" "}
+                <strong style={{ color: headingColor }}>
+                  {counselor.name ?? counselor.email ?? "Counselor"}
+                </strong>
+              </span>
+            ) : (
+              <span>
+                {loading ? "Loading counselor…" : "No counselor profile found"}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
